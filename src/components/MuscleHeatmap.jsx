@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getWeeklyVolume, getVolumeStatus, VOLUME_THRESHOLDS } from '../lib/volumeTracker'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 // ─── region definitions ──────────────────────────────────────────────────────
 
@@ -115,6 +116,7 @@ const STATUS_DOT_COLORS = {
 export default function MuscleHeatmap({ userId }) {
   const [volumeMap, setVolumeMap] = useState({})
   const [loading, setLoading] = useState(true)
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     if (!userId) return
@@ -132,35 +134,61 @@ export default function MuscleHeatmap({ userId }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
-        {/* Silhouettes */}
-        <div style={{ display: 'flex', gap: '24px' }}>
-          <BodySVG regions={FRONT_REGIONS} label="Front" volumeMap={volumeMap} />
-          <BodySVG regions={BACK_REGIONS} label="Back" volumeMap={volumeMap} />
-        </div>
-
-        {/* Volume list */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--dim)', marginBottom: '10px' }}>
+      {isMobile ? (
+        /* ── Mobile: bodies centered on top, grid list below ── */
+        <>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', marginBottom: '16px' }}>
+            <BodySVG regions={FRONT_REGIONS} label="Front" volumeMap={volumeMap} />
+            <BodySVG regions={BACK_REGIONS} label="Back" volumeMap={volumeMap} />
+          </div>
+          <div style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--dim)', marginBottom: '8px' }}>
             This week
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px' }}>
             {ALL_MUSCLE_GROUPS.map(mg => {
               const row = volumeMap[mg]
               const sets = row?.total_sets || 0
               const status = getVolumeStatus(mg, sets)
               const t = VOLUME_THRESHOLDS[mg]
               return (
-                <div key={mg} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: STATUS_DOT_COLORS[status], flexShrink: 0 }} />
-                  <span style={{ color: 'var(--text)', flex: 1, textTransform: 'capitalize' }}>{mg.replace(/_/g, ' ')}</span>
-                  <span style={{ color: 'var(--muted)', fontSize: '11px' }}>{sets} / {t.min}–{t.max}</span>
+                <div key={mg} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                  <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: STATUS_DOT_COLORS[status], flexShrink: 0 }} />
+                  <span style={{ color: 'var(--text)', textTransform: 'capitalize', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mg.replace(/_/g, ' ')}</span>
+                  <span style={{ color: 'var(--muted)', fontSize: '10px', flexShrink: 0 }}>{sets}</span>
                 </div>
               )
             })}
           </div>
+        </>
+      ) : (
+        /* ── Desktop: original side-by-side layout ── */
+        <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', gap: '24px' }}>
+            <BodySVG regions={FRONT_REGIONS} label="Front" volumeMap={volumeMap} />
+            <BodySVG regions={BACK_REGIONS} label="Back" volumeMap={volumeMap} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--dim)', marginBottom: '10px' }}>
+              This week
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {ALL_MUSCLE_GROUPS.map(mg => {
+                const row = volumeMap[mg]
+                const sets = row?.total_sets || 0
+                const status = getVolumeStatus(mg, sets)
+                const t = VOLUME_THRESHOLDS[mg]
+                return (
+                  <div key={mg} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: STATUS_DOT_COLORS[status], flexShrink: 0 }} />
+                    <span style={{ color: 'var(--text)', flex: 1, textTransform: 'capitalize' }}>{mg.replace(/_/g, ' ')}</span>
+                    <span style={{ color: 'var(--muted)', fontSize: '11px' }}>{sets} / {t.min}–{t.max}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Legend */}
       <div style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
