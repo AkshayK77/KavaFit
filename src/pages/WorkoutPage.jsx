@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { generateOneOffSession, generateSessionFromPreferences, getWeekStart } from '../lib/workoutPlan'
 import { updateVolumeLog } from '../lib/volumeTracker'
 import { getProgressionSuggestion } from '../lib/progressiveOverload'
@@ -226,6 +227,7 @@ export default function WorkoutPage() {
   const { user, workoutUpdate, setWorkoutUpdate, setActiveSessionExercises } = useAuth()
   const navigate = useNavigate()
   const { showToast } = useToast()
+  const isMobile = useIsMobile()
 
   // Mode A state
   const [plan, setPlan] = useState(null)
@@ -1266,7 +1268,7 @@ export default function WorkoutPage() {
   return (
     <>
       {genModal}
-      <div style={s.page}>
+      <div style={{ ...s.page, padding: isMobile ? '16px 16px 24px' : '28px' }}>
         <h1 style={s.title}>Workout</h1>
         <p style={s.sub}>Select a session template or generate a fresh one with AI.</p>
 

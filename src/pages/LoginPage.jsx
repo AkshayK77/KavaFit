@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 const styles = {
   page: {
@@ -247,6 +248,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const { user } = useAuth()
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     if (user) checkAndRedirect(user)
@@ -328,43 +330,66 @@ export default function LoginPage() {
     ...(errors[key] ? styles.inputError : {}),
   })
 
+  const mobilePageStyle = isMobile ? {
+    ...styles.page,
+    flexDirection: 'column',
+    overflow: 'auto',
+  } : styles.page
+
+  const mobileRightPanelStyle = isMobile ? {
+    ...styles.rightPanel,
+    flex: '1 1 100%',
+    width: '100%',
+    padding: '32px 24px 48px',
+    justifyContent: 'flex-start',
+  } : styles.rightPanel
+
   return (
-    <div style={styles.page}>
-      {/* Left panel */}
-      <div style={styles.leftPanel}>
-        <div style={styles.grid} />
-        <div style={styles.brand}>
-          <BrandMark />
-          <span style={styles.brandName}>FORGE</span>
-        </div>
-        <div style={styles.leftContent}>
-          <h1 style={styles.headline}>
-            Train smarter.<br />
-            <span style={styles.headlineAccent}>Progress faster.</span>
-          </h1>
-          <p style={styles.subtitle}>
-            The AI fitness coach that knows your body, your history, and your goals. Built for people who take their training seriously.
-          </p>
-        </div>
-        <div style={styles.stats}>
-          <div style={styles.stat}>
-            <span style={styles.statNumber}>14K+</span>
-            <span style={styles.statLabel}>Active users</span>
+    <div style={mobilePageStyle}>
+      {/* Left panel — desktop only */}
+      {!isMobile && (
+        <div style={styles.leftPanel}>
+          <div style={styles.grid} />
+          <div style={styles.brand}>
+            <BrandMark />
+            <span style={styles.brandName}>FORGE</span>
           </div>
-          <div style={styles.stat}>
-            <span style={styles.statNumber}>2.1M</span>
-            <span style={styles.statLabel}>Sessions logged</span>
+          <div style={styles.leftContent}>
+            <h1 style={styles.headline}>
+              Train smarter.<br />
+              <span style={styles.headlineAccent}>Progress faster.</span>
+            </h1>
+            <p style={styles.subtitle}>
+              The AI fitness coach that knows your body, your history, and your goals. Built for people who take their training seriously.
+            </p>
           </div>
-          <div style={styles.stat}>
-            <span style={styles.statNumber}>98%</span>
-            <span style={styles.statLabel}>Hit their goals</span>
+          <div style={styles.stats}>
+            <div style={styles.stat}>
+              <span style={styles.statNumber}>14K+</span>
+              <span style={styles.statLabel}>Active users</span>
+            </div>
+            <div style={styles.stat}>
+              <span style={styles.statNumber}>2.1M</span>
+              <span style={styles.statLabel}>Sessions logged</span>
+            </div>
+            <div style={styles.stat}>
+              <span style={styles.statNumber}>98%</span>
+              <span style={styles.statLabel}>Hit their goals</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Right panel */}
-      <div style={styles.rightPanel}>
-        <div style={styles.formBox}>
+      <div style={mobileRightPanelStyle}>
+        {/* Mobile logo */}
+        {isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '36px' }}>
+            <BrandMark />
+            <span style={styles.brandName}>FORGE</span>
+          </div>
+        )}
+        <div style={{ ...styles.formBox, maxWidth: isMobile ? '100%' : '340px' }}>
           {/* Tab toggle */}
           <div style={styles.tabRow}>
             <button

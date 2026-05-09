@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import VolumeTracker from '../components/VolumeTracker'
 import { getWeekStart } from '../lib/workoutPlan'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -191,6 +192,7 @@ const s = {
 
 export default function ProgressPage() {
   const { user } = useAuth()
+  const isMobile = useIsMobile()
   const fileInputRef = useRef(null)
   const now = new Date()
 
@@ -512,7 +514,7 @@ export default function ProgressPage() {
   // ── render ────────────────────────────────────────────────────────────────
 
   return (
-    <div style={s.page}>
+    <div style={{ ...s.page, padding: isMobile ? '16px 16px 40px' : '28px 28px 60px' }}>
       <h1 style={s.pageTitle}>Progress</h1>
 
       {/* ── SECTION A — Body weight graph ──────────────────────────────────── */}

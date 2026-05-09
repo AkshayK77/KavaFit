@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { getWeeklyVolume, getVolumeStatus, VOLUME_THRESHOLDS } from '../lib/volumeTracker'
 import { checkDeload, markDeloadSuggested } from '../lib/deloadDetector'
 import { getWeekStart } from '../lib/workoutPlan'
@@ -123,6 +124,7 @@ const s = {
 export default function DashboardPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   const [profile, setProfile] = useState(null)
   const [streak, setStreak] = useState({ count: 0, isAmber: false })
@@ -305,7 +307,7 @@ export default function DashboardPage() {
   const firstName = profile?.full_name?.split(' ')[0] || 'Athlete'
 
   return (
-    <div style={s.page}>
+    <div style={{ ...s.page, padding: isMobile ? '16px 16px 24px' : '28px' }}>
       {/* ── Greeting row ── */}
       <div style={s.greetingRow}>
         <div>

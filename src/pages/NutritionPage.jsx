@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { callAgent, parseAgentJSON } from '../lib/geminiAgent'
 import { useToast } from '../components/Toast'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 function todayStr() { return new Date().toISOString().split('T')[0] }
 
@@ -76,6 +77,7 @@ const s = {
 export default function NutritionPage() {
   const { user } = useAuth()
   const { showToast } = useToast()
+  const isMobile = useIsMobile()
 
   const [profile, setProfile] = useState(null)
   const [todayMeals, setTodayMeals] = useState([])
@@ -265,7 +267,7 @@ export default function NutritionPage() {
   const blurBorder = e => { e.target.style.borderColor = 'var(--border)' }
 
   return (
-    <div style={s.page}>
+    <div style={{ ...s.page, padding: isMobile ? '16px 16px 40px' : '28px 28px 60px' }}>
       <h1 style={s.title}>Nutrition</h1>
 
       {/* ── SECTION A — Daily macro targets ── */}
@@ -342,7 +344,7 @@ export default function NutritionPage() {
                 placeholder="Chicken & rice"
                 value={addForm.name}
                 onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))}
-                style={s.inputWide}
+                style={{ ...s.inputWide, width: isMobile ? '100%' : '180px' }}
                 onFocus={focusAccent} onBlur={blurBorder}
               />
             </div>
