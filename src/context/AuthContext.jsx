@@ -13,16 +13,22 @@ export function AuthProvider({ children }) {
 
   const [workoutUpdate, setWorkoutUpdate] = useState(null)
   const [activeSessionExercises, setActiveSessionExercises] = useState([])
+  const [avatarUrl, setAvatarUrl] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+      if (session?.user) {
+        supabase.from('profiles').select('avatar_url').eq('id', session.user.id).single()
+          .then(({ data }) => { if (data?.avatar_url) setAvatarUrl(data.avatar_url) })
+      }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
+      if (!session?.user) setAvatarUrl(null)
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -40,6 +46,7 @@ export function AuthProvider({ children }) {
       openDrawerWithMessage,
       workoutUpdate, setWorkoutUpdate,
       activeSessionExercises, setActiveSessionExercises,
+      avatarUrl, setAvatarUrl,
     }}>
       {children}
     </AuthContext.Provider>

@@ -270,7 +270,11 @@ export default function ProgressPage() {
   async function saveWeight() {
     if (!newWeightVal) return
     setSavingWeight(true)
-    await supabase.from('measurements').insert({ user_id: user.id, date: newWeightDate, weight_kg: parseFloat(newWeightVal) })
+    const kg = parseFloat(newWeightVal)
+    await Promise.all([
+      supabase.from('measurements').insert({ user_id: user.id, date: newWeightDate, weight_kg: kg }),
+      supabase.from('profiles').update({ weight_kg: kg }).eq('id', user.id),
+    ])
     setSavingWeight(false)
     setShowWeightForm(false)
     setNewWeightVal('')

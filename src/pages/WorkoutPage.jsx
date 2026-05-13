@@ -9,6 +9,7 @@ import { getProgressionSuggestion } from '../lib/progressiveOverload'
 import { callAgent, parseAgentJSON } from '../lib/geminiAgent'
 import { saveOfflineSet, saveOfflineSession, getOfflineSets, getOfflineSessions, clearOfflineSet, clearOfflineSession } from '../lib/offlineDb'
 import { useToast } from '../components/Toast'
+import ManualWorkoutLogger from '../components/ManualWorkoutLogger'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -261,6 +262,9 @@ export default function WorkoutPage() {
   const [completionData, setCompletionData] = useState(null)
   const [prOverlay, setPrOverlay] = useState(null)
   const [profile, setProfile] = useState(null)
+
+  // Log workout modal
+  const [showLogModal, setShowLogModal] = useState(false)
 
   // Generation modal
   const [showGenModal, setShowGenModal] = useState(false)
@@ -911,6 +915,13 @@ export default function WorkoutPage() {
 
   // ── render ────────────────────────────────────────────────────────────────
 
+  const logModal = showLogModal && (
+    <ManualWorkoutLogger
+      onClose={() => setShowLogModal(false)}
+      onSaved={() => setShowLogModal(false)}
+    />
+  )
+
   const genModal = showGenModal && (
     <div style={s.modalOverlay}>
       <div style={s.modalCard}>
@@ -1084,6 +1095,7 @@ export default function WorkoutPage() {
   if (completed && completionData) {
     return (
       <>
+        {logModal}
         {genModal}
         <div style={s.completionPage}>
           <div style={s.completionTitle}>Session Complete 🎉</div>
@@ -1126,6 +1138,7 @@ export default function WorkoutPage() {
   if (mode === 'B') {
     return (
       <>
+        {logModal}
         {genModal}
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           {/* Session header */}
@@ -1267,6 +1280,7 @@ export default function WorkoutPage() {
   // Mode A
   return (
     <>
+      {logModal}
       {genModal}
       <div style={{ ...s.page, padding: isMobile ? '16px 16px 24px' : '28px' }}>
         <h1 style={s.title}>Workout</h1>
@@ -1279,12 +1293,12 @@ export default function WorkoutPage() {
           </div>
           <div style={s.btnRow}>
             <button
-              style={{ ...s.btnOutline, ...((!todayDay || loading) ? s.btnDisabled : {}) }}
-              onClick={handleLoadTemplate}
+              style={s.btnOutline}
+              onClick={() => setShowLogModal(true)}
               onMouseOver={e => e.currentTarget.style.borderColor = 'var(--accent)'}
               onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border2)'}
             >
-              Load template
+              Log workout
             </button>
             <button
               style={{ ...s.btnAccent, ...(generating ? s.btnDisabled : {}) }}

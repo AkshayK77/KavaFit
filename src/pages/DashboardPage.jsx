@@ -132,6 +132,7 @@ export default function DashboardPage() {
   const [todayExercises, setTodayExercises] = useState([])
   const [nutrition, setNutrition] = useState({ protein: 0, calories: 0 })
   const [flags, setFlags] = useState([])
+  const [refreshingFlags, setRefreshingFlags] = useState(false)
   const [weeklySummary, setWeeklySummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [generatingWorkout, setGeneratingWorkout] = useState(false)
@@ -257,32 +258,44 @@ export default function DashboardPage() {
     return result
   }
 
-  async function loadAiFlags(userId, prof, streakVal, volumeRows, deloadData) {
+  async function loadAiFlags(userId, prof, streakVal, volumeRows, deloadData, forceRefresh = false) {
     const prFlags = getPrFlagsFromStorage()
-    const cacheKey = `forge_flags_${userId}`
+    const today = new Date().toISOString().split('T')[0]
+    const cacheKey = `forge_flags_${userId}_${today}`
 
-    try {
-      const cached = localStorage.getItem(cacheKey)
-      if (cached) {
-        const { flags: cachedFlags, timestamp } = JSON.parse(cached)
-        if (Date.now() - timestamp < 6 * 60 * 60 * 1000) {
-          setFlags([...prFlags, ...cachedFlags])
-          return
+    if (!forceRefresh) {
+      try {
+        const cached = localStorage.getItem(cacheKey)
+        if (cached) {
+          const { flags: cachedFlags } = JSON.parse(cached)
+          if (Array.isArray(cachedFlags) && cachedFlags.length > 0) {
+            setFlags([...prFlags, ...cachedFlags])
+            return
+          }
         }
-      }
-    } catch { /* ignore corrupt cache */ }
+      } catch { /* ignore corrupt cache */ }
+    }
 
     try {
       const text = await callAgent(userId, '', 'flags')
       const parsed = parseAgentJSON(text)
       if (Array.isArray(parsed) && parsed.length > 0) {
         setFlags([...prFlags, ...parsed])
-        localStorage.setItem(cacheKey, JSON.stringify({ flags: parsed, timestamp: Date.now() }))
+        localStorage.setItem(cacheKey, JSON.stringify({ flags: parsed }))
         return
       }
     } catch { /* fall through to local */ }
 
     setFlags([...prFlags, ...buildLocalFlags(prof, streakVal, volumeRows, deloadData)])
+  }
+
+  async function handleRefreshInsights() {
+    if (!user || refreshingFlags) return
+    setRefreshingFlags(true)
+    const today = new Date().toISOString().split('T')[0]
+    localStorage.removeItem(`forge_flags_${user.id}_${today}`)
+    await loadAiFlags(user.id, profile, streak.count, [], null, true)
+    setRefreshingFlags(false)
   }
 
   const estDuration = todayExercises.length
@@ -416,7 +429,16 @@ export default function DashboardPage() {
       {/* ── Agent flags ── */}
       {flags.length > 0 && (
         <>
-          <div style={s.sectionLabel}>Insights</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <div style={{ ...s.sectionLabel, marginBottom: 0 }}>Insights</div>
+            <button
+              onClick={handleRefreshInsights}
+              disabled={refreshingFlags}
+              style={{ background: 'none', border: 'none', color: refreshingFlags ? 'var(--dim)' : 'var(--muted)', fontSize: '11px', cursor: refreshingFlags ? 'default' : 'pointer', padding: 0, fontFamily: 'inherit' }}
+            >
+              {refreshingFlags ? 'Refreshing…' : 'Refresh'}
+            </button>
+          </div>
           <div style={s.flagsCard}>
             {flags.map((flag, i) => (
               <div key={i} style={{ ...s.flagItem, ...(i === flags.length - 1 ? { borderBottom: 'none', paddingBottom: 0 } : {}) }}>

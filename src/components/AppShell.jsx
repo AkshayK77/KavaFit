@@ -16,7 +16,7 @@ const NAV_ITEMS = [
 ]
 
 export default function AppShell({ children }) {
-  const { user, drawerOpen, setDrawerOpen } = useAuth()
+  const { user, drawerOpen, setDrawerOpen, avatarUrl } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const isMobile = useIsMobile()
@@ -95,10 +95,15 @@ export default function AppShell({ children }) {
             </button>
           )}
           <div
-            style={{ ...s.avatar, cursor: 'pointer' }}
+            style={{ ...s.avatar, cursor: 'pointer', overflow: 'hidden', padding: 0 }}
             title="Settings"
             onClick={() => navigate('/settings')}
-          >{initials}</div>
+          >
+            {avatarUrl
+              ? <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }} />
+              : initials
+            }
+          </div>
         </div>
       </header>
 

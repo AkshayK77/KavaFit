@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from './Toast'
 import { updateVolumeLog } from '../lib/volumeTracker'
+import { classifyExercise } from '../lib/exerciseClassifier'
 
 function todayStr() {
   return new Date().toISOString().split('T')[0]
@@ -42,6 +43,11 @@ const s = {
     padding: '10px 14px', cursor: 'pointer', fontSize: '13px',
     borderBottom: '1px solid var(--border)', transition: 'background 0.1s',
   },
+  dropdownCustom: {
+    padding: '10px 14px', cursor: 'pointer', fontSize: '13px',
+    color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '6px',
+    transition: 'background 0.1s',
+  },
   exBlock: {
     background: 'var(--surface)', border: '1px solid var(--border)',
     borderRadius: '10px', overflow: 'hidden',
@@ -52,6 +58,7 @@ const s = {
   },
   exName: { fontSize: '14px', fontWeight: '600' },
   exMuscles: { fontSize: '11px', color: 'var(--accent)', marginTop: '2px' },
+  exCustomBadge: { fontSize: '10px', color: 'var(--amber)', marginTop: '2px', fontWeight: '600', letterSpacing: '0.06em', textTransform: 'uppercase' },
   removeExBtn: { background: 'none', border: 'none', color: 'var(--muted)', fontSize: '16px', cursor: 'pointer', lineHeight: 1 },
   setHeadRow: {
     display: 'grid', gridTemplateColumns: '36px 1fr 1fr 28px', gap: '8px',
@@ -86,11 +93,13 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
 
   const [sessionName, setSessionName] = useState('')
   const [selectedDate, setSelectedDate] = useState(todayStr())
+  const [durationMinutes, setDurationMinutes] = useState('')
   const [exercises, setExercises] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [classifying, setClassifying] = useState({}) // tempId → true while classifying
   const searchTimeout = useRef(null)
 
   useEffect(() => {
@@ -117,6 +126,20 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
     ])
     setSearchQuery('')
     setSearchResults([])
+  }
+
+  async function addCustomExercise(name) {
+    const tempId = `__custom_${Date.now()}`
+    const trimmed = name.trim()
+    addExercise({ id: tempId, name: trimmed, muscle_groups: [], isCustom: true })
+    setClassifying(prev => ({ ...prev, [tempId]: true }))
+    const groups = await classifyExercise(trimmed)
+    setExercises(prev => prev.map(ex =>
+      ex.exercise.id === tempId
+        ? { ...ex, exercise: { ...ex.exercise, muscle_groups: groups } }
+        : ex
+    ))
+    setClassifying(prev => { const next = { ...prev }; delete next[tempId]; return next })
   }
 
   function removeExercise(idx) {
@@ -150,10 +173,25 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
 
   function isValid() {
     if (!sessionName.trim() || !selectedDate) return false
-    const hasSets = exercises.some(ex =>
-      ex.sets.some(s => String(s.reps || '').trim() !== '')
-    )
-    return hasSets
+    return exercises.some(ex => ex.sets.some(s => String(s.reps || '').trim() !== ''))
+  }
+
+  async function resolveExerciseId(ex) {
+    if (!ex.isCustom) return ex.id
+    const { data: existing } = await supabase
+      .from('exercises')
+      .select('id')
+      .ilike('name', ex.name)
+      .limit(1)
+      .maybeSingle()
+    if (existing) return existing.id
+    const { data: created, error } = await supabase
+      .from('exercises')
+      .insert({ name: ex.name, muscle_groups: ex.muscle_groups || [] })
+      .select('id')
+      .single()
+    if (error) throw error
+    return created.id
   }
 
   async function handleSave() {
@@ -161,7 +199,16 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
     setSaving(true)
     try {
       const name = sessionName.trim()
-      const exerciseIds = exercises.map(ex => ex.exercise.id)
+
+      // Resolve any custom exercises to real DB IDs first
+      const resolvedExercises = await Promise.all(
+        exercises.map(async ex => ({
+          ...ex,
+          exercise: { ...ex.exercise, id: await resolveExerciseId(ex.exercise) },
+        }))
+      )
+
+      const exerciseIds = resolvedExercises.map(ex => ex.exercise.id)
 
       const { data: sessionRow, error: sessionErr } = await supabase
         .from('sessions')
@@ -172,7 +219,7 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
           plan_day_id: null,
           notes: JSON.stringify({ sessionName: name, generatedExerciseIds: exerciseIds }),
           completed_at: new Date(selectedDate + 'T12:00:00').toISOString(),
-          duration_minutes: null,
+          duration_minutes: durationMinutes !== '' ? parseInt(durationMinutes) || null : null,
         })
         .select('id')
         .single()
@@ -182,7 +229,7 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
       const allInsertSets = []
       const setsForVolume = []
 
-      exercises.forEach(ex => {
+      resolvedExercises.forEach(ex => {
         ex.sets.forEach((s, si) => {
           const repsStr = String(s.reps || '').trim()
           if (!repsStr) return
@@ -222,6 +269,11 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
     const unique = [...new Set(muscleGroups.map(m => m.split('_')[0]))]
     return unique.slice(0, 3).join(', ')
   }
+
+  const trimmedQuery = searchQuery.trim()
+  const showCustomOption = trimmedQuery.length > 1 && !searching &&
+    !exercises.some(e => e.exercise.name.toLowerCase() === trimmedQuery.toLowerCase())
+  const showDropdown = searching || searchResults.length > 0 || showCustomOption
 
   return (
     <div style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
@@ -265,6 +317,25 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
           </div>
         </div>
 
+        {/* Duration */}
+        <div>
+          <label style={s.label}>Duration (optional)</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="number"
+              min="1"
+              max="300"
+              placeholder="—"
+              style={{ ...s.input, width: '80px', textAlign: 'center' }}
+              value={durationMinutes}
+              onChange={e => setDurationMinutes(e.target.value)}
+              onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            />
+            <span style={{ fontSize: '13px', color: 'var(--muted)' }}>minutes</span>
+          </div>
+        </div>
+
         <div style={s.divider} />
 
         {/* Exercise search */}
@@ -273,14 +344,19 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
           <div style={s.searchWrap}>
             <input
               style={s.input}
-              placeholder="Search exercises…"
+              placeholder="Search or type any exercise name…"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onFocus={e => e.target.style.borderColor = 'var(--accent)'}
               onBlur={e => { e.target.style.borderColor = 'var(--border)'; setTimeout(() => setSearchResults([]), 150) }}
             />
-            {searchResults.length > 0 && (
+            {showDropdown && (
               <div style={s.dropdown}>
+                {searching && (
+                  <div style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--muted)' }}>
+                    Searching…
+                  </div>
+                )}
                 {searchResults.map(ex => (
                   <div
                     key={ex.id}
@@ -297,11 +373,17 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
                     )}
                   </div>
                 ))}
-              </div>
-            )}
-            {searching && searchQuery.trim() && searchResults.length === 0 && (
-              <div style={{ ...s.dropdown, padding: '10px 14px', fontSize: '12px', color: 'var(--muted)' }}>
-                Searching…
+                {showCustomOption && (
+                  <div
+                    style={s.dropdownCustom}
+                    onMouseDown={() => addCustomExercise(trimmedQuery)}
+                    onMouseOver={e => e.currentTarget.style.background = 'var(--surface2)'}
+                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span style={{ fontSize: '16px', lineHeight: 1 }}>+</span>
+                    <span>Add "<strong>{trimmedQuery}</strong>" as new exercise</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -309,7 +391,7 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
 
         {/* Exercise blocks */}
         {exercises.length === 0 ? (
-          <div style={s.emptyExercises}>Search above to add exercises</div>
+          <div style={s.emptyExercises}>Search above to add exercises, or type a name to create a custom one</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {exercises.map((ex, exIdx) => (
@@ -317,7 +399,14 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
                 <div style={s.exBlockHeader}>
                   <div>
                     <div style={s.exName}>{ex.exercise.name}</div>
-                    {ex.exercise.muscle_groups?.length > 0 && (
+                    {ex.exercise.isCustom && (
+                      classifying[ex.exercise.id]
+                        ? <div style={s.exCustomBadge}>Identifying muscles…</div>
+                        : ex.exercise.muscle_groups?.length > 0
+                          ? <div style={s.exMuscles}>{ex.exercise.muscle_groups.join(', ')}</div>
+                          : <div style={s.exCustomBadge}>Custom · no muscles identified</div>
+                    )}
+                    {!ex.exercise.isCustom && ex.exercise.muscle_groups?.length > 0 && (
                       <div style={s.exMuscles}>{formatMuscles(ex.exercise.muscle_groups)}</div>
                     )}
                   </div>

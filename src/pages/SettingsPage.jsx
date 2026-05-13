@@ -24,7 +24,7 @@ const EQUIP_OPTIONS = [
 ]
 
 export default function SettingsPage() {
-  const { user } = useAuth()
+  const { user, setAvatarUrl: setGlobalAvatarUrl } = useAuth()
   const navigate = useNavigate()
   const { showToast } = useToast()
   const fileRef = useRef(null)
@@ -107,8 +107,9 @@ export default function SettingsPage() {
       if (error) throw error
       setProfile(prev => ({ ...prev, ...profileData }))
       showToast('Profile saved', 'success')
-    } catch {
-      showToast('Failed to save profile', 'error')
+    } catch (err) {
+      console.error('Profile save error:', err)
+      showToast(`Failed to save profile: ${err?.message || err}`, 'error')
     } finally {
       setSaving(false)
     }
@@ -132,6 +133,7 @@ export default function SettingsPage() {
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
       await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
       setAvatarUrl(publicUrl)
+      setGlobalAvatarUrl(publicUrl)
       showToast('Photo updated', 'success')
     } catch {
       showToast('Photo upload failed', 'error')
@@ -192,7 +194,7 @@ export default function SettingsPage() {
         <div style={s.photoRow}>
           <div style={s.avatarLg} onClick={() => fileRef.current?.click()}>
             {avatarUrl
-              ? <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+              ? <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }} />
               : <span style={{ fontSize: '22px', fontWeight: '600', color: 'var(--accent)' }}>{initials}</span>
             }
           </div>
