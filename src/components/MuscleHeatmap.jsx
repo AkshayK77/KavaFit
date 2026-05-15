@@ -46,36 +46,36 @@ const BACK_REGIONS = [
 ]
 
 const STATUS_COLORS = {
-  none:    (o) => `rgba(51,51,51,${o})`,
-  low:     (o) => `rgba(245,166,35,${0.6 * o})`,
+  none: (o) => `rgba(51,51,51,${o})`,
+  low: (o) => `rgba(245,166,35,${0.6 * o})`,
   optimal: (o) => `rgba(200,245,90,${0.75 * o})`,
-  high:    (o) => `rgba(255,92,92,${0.55 * o})`,
+  high: (o) => `rgba(255,92,92,${0.55 * o})`,
 }
 
 const STATUS_DOT_COLORS = {
-  none:    '#555555',
-  low:     '#f5a623',
+  none: '#555555',
+  low: '#f5a623',
   optimal: '#C8F55A',
-  high:    '#ff5c5c',
+  high: '#ff5c5c',
 }
 
 const STATUS_LABELS = {
-  none:    'Not trained',
-  low:     'Below target',
+  none: 'Not trained',
+  low: 'Below target',
   optimal: 'On track',
-  high:    'Overloaded',
+  high: 'Overloaded',
 }
 
-const DECORATIVE_FILL   = '#1e1e1e'
+const DECORATIVE_FILL = '#1e1e1e'
 const DECORATIVE_STROKE = '#2a2a2a'
 
 const ALL_MUSCLE_GROUPS = Object.keys(VOLUME_THRESHOLDS)
 
 const STATUS_LEGEND = [
-  { color: '#333333',               label: 'Not trained this week' },
-  { color: 'rgba(245,166,35,0.6)',  label: 'Below target volume' },
+  { color: '#333333', label: 'Not trained this week' },
+  { color: 'rgba(245,166,35,0.6)', label: 'Below target volume' },
   { color: 'rgba(200,245,90,0.75)', label: 'Optimal volume' },
-  { color: 'rgba(255,92,92,0.55)',  label: 'Overdue or overtrained' },
+  { color: 'rgba(255,92,92,0.55)', label: 'Overdue or overtrained' },
 ]
 
 function regionFill(muscleGroup, volumeMap) {
@@ -104,10 +104,10 @@ function BodySVG({ regions, label, volumeMap, selectedMuscle, onMuscleClick }) {
       <svg viewBox="0 0 100 210" width="110" height="231" style={{ display: 'block', margin: '0 auto' }}>
         {regions.map(r => {
           const isInteractive = !!r.muscleGroup
-          const isSelected    = r.muscleGroup === selectedMuscle
-          const isHovered     = r.id === hoveredId && isInteractive
+          const isSelected = r.muscleGroup === selectedMuscle
+          const isHovered = r.id === hoveredId && isInteractive
 
-          const fill   = regionFill(r.muscleGroup, volumeMap)
+          const fill = regionFill(r.muscleGroup, volumeMap)
           const stroke = isSelected
             ? 'rgba(255,255,255,0.55)'
             : isHovered
@@ -118,17 +118,17 @@ function BodySVG({ regions, label, volumeMap, selectedMuscle, onMuscleClick }) {
             fill,
             stroke,
             strokeWidth: isSelected ? 1.4 : 0.8,
-            cursor:  isInteractive ? 'pointer' : 'default',
+            cursor: isInteractive ? 'pointer' : 'default',
             opacity: isHovered ? 0.82 : 1,
             transition: 'opacity 0.1s',
           }
 
           const handlers = isInteractive
             ? {
-                onMouseEnter: () => setHoveredId(r.id),
-                onMouseLeave: () => setHoveredId(null),
-                onClick:      () => onMuscleClick(r.muscleGroup),
-              }
+              onMouseEnter: () => setHoveredId(r.id),
+              onMouseLeave: () => setHoveredId(null),
+              onClick: () => onMuscleClick(r.muscleGroup),
+            }
             : {}
 
           if (r.shape === 'ellipse') return <ellipse key={r.id} {...r.attrs} {...common} {...handlers} />
@@ -142,10 +142,10 @@ function BodySVG({ regions, label, volumeMap, selectedMuscle, onMuscleClick }) {
 // ─── EditPanel ────────────────────────────────────────────────────────────────
 
 function EditPanel({ muscleGroup, volumeMap, userId, onClose, onUpdate, onOpenLogger }) {
-  const t       = VOLUME_THRESHOLDS[muscleGroup] || { min: 10, max: 20 }
-  const row     = volumeMap[muscleGroup]
+  const t = VOLUME_THRESHOLDS[muscleGroup] || { min: 10, max: 20 }
+  const row = volumeMap[muscleGroup]
   const current = row?.total_sets || 0
-  const status  = getVolumeStatus(muscleGroup, current)
+  const status = getVolumeStatus(muscleGroup, current)
 
   const saveTimerRef = useRef(null)
 
@@ -170,10 +170,10 @@ function EditPanel({ muscleGroup, volumeMap, userId, onClose, onUpdate, onOpenLo
   }
 
   const presets = [
-    { label: 'None',    sets: 0,                       status: 'none' },
-    { label: 'Light',   sets: Math.floor(t.min * 0.7), status: 'low' },
-    { label: 'Trained', sets: t.min,                   status: 'optimal' },
-    { label: 'Max',     sets: t.max,                   status: 'optimal' },
+    { label: 'None', sets: 0, status: 'none' },
+    { label: 'Light', sets: Math.floor(t.min * 0.7), status: 'low' },
+    { label: 'Trained', sets: t.min, status: 'optimal' },
+    { label: 'Max', sets: t.max, status: 'optimal' },
   ]
 
   const name = muscleGroup.replace(/_/g, ' ')
@@ -195,7 +195,7 @@ function EditPanel({ muscleGroup, volumeMap, userId, onClose, onUpdate, onOpenLo
         padding: '20px 24px',
         paddingBottom: 'calc(28px + env(safe-area-inset-bottom, 0px))',
         zIndex: 211, boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
-        maxHeight: '85vh', overflowY: 'auto',
+        maxHeight: 'calc(100dvh - 24px)', overflowY: 'auto', boxSizing: 'border-box',
       }}>
         {/* drag handle */}
         <div style={{ width: '36px', height: '4px', background: 'var(--border2)', borderRadius: '2px', margin: '0 auto 16px' }} />
@@ -298,10 +298,10 @@ const adjBtnStyle = {
 // ─── MuscleHeatmap ────────────────────────────────────────────────────────────
 
 export default function MuscleHeatmap({ userId }) {
-  const [volumeMap, setVolumeMap]           = useState({})
-  const [loading, setLoading]               = useState(true)
+  const [volumeMap, setVolumeMap] = useState({})
+  const [loading, setLoading] = useState(true)
   const [selectedMuscle, setSelectedMuscle] = useState(null)
-  const [showLogger, setShowLogger]         = useState(false)
+  const [showLogger, setShowLogger] = useState(false)
   const isMobile = useIsMobile()
 
   function loadVolume() {
@@ -363,17 +363,17 @@ export default function MuscleHeatmap({ userId }) {
         <>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', marginBottom: '16px' }}>
             <BodySVG regions={FRONT_REGIONS} label="Front" volumeMap={volumeMap} selectedMuscle={selectedMuscle} onMuscleClick={handleMuscleClick} />
-            <BodySVG regions={BACK_REGIONS}  label="Back"  volumeMap={volumeMap} selectedMuscle={selectedMuscle} onMuscleClick={handleMuscleClick} />
+            <BodySVG regions={BACK_REGIONS} label="Back" volumeMap={volumeMap} selectedMuscle={selectedMuscle} onMuscleClick={handleMuscleClick} />
           </div>
           <div style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--dim)', marginBottom: '8px' }}>
             This week
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px' }}>
             {ALL_MUSCLE_GROUPS.map(mg => {
-              const row    = volumeMap[mg]
-              const sets   = row?.total_sets || 0
+              const row = volumeMap[mg]
+              const sets = row?.total_sets || 0
               const status = getVolumeStatus(mg, sets)
-              const t      = VOLUME_THRESHOLDS[mg]
+              const t = VOLUME_THRESHOLDS[mg]
               const isSelected = mg === selectedMuscle
               return (
                 <div
@@ -399,7 +399,7 @@ export default function MuscleHeatmap({ userId }) {
         <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', gap: '24px' }}>
             <BodySVG regions={FRONT_REGIONS} label="Front" volumeMap={volumeMap} selectedMuscle={selectedMuscle} onMuscleClick={handleMuscleClick} />
-            <BodySVG regions={BACK_REGIONS}  label="Back"  volumeMap={volumeMap} selectedMuscle={selectedMuscle} onMuscleClick={handleMuscleClick} />
+            <BodySVG regions={BACK_REGIONS} label="Back" volumeMap={volumeMap} selectedMuscle={selectedMuscle} onMuscleClick={handleMuscleClick} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--dim)', marginBottom: '10px' }}>
@@ -407,10 +407,10 @@ export default function MuscleHeatmap({ userId }) {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {ALL_MUSCLE_GROUPS.map(mg => {
-                const row    = volumeMap[mg]
-                const sets   = row?.total_sets || 0
+                const row = volumeMap[mg]
+                const sets = row?.total_sets || 0
                 const status = getVolumeStatus(mg, sets)
-                const t      = VOLUME_THRESHOLDS[mg]
+                const t = VOLUME_THRESHOLDS[mg]
                 const isSelected = mg === selectedMuscle
                 return (
                   <div

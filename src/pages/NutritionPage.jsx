@@ -7,6 +7,12 @@ import { useIsMobile } from '../hooks/useIsMobile'
 
 function todayStr() { return new Date().toISOString().split('T')[0] }
 
+function getDaysInMonth(y, m) { return new Date(y, m + 1, 0).getDate() }
+function getFirstDayOfMonth(y, m) { return new Date(y, m, 1).getDay() }
+function toDateStr(y, m, d) { return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}` }
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
 function MacroCard({ label, current, target, color, unit }) {
   const pct = target > 0 ? Math.min(current / target, 1) : 0
   const remaining = target > 0 ? Math.max(target - current, 0) : null
@@ -72,6 +78,17 @@ const s = {
   historyName: { flex: 1, fontSize: '13px', fontWeight: '500', marginRight: '8px' },
   historyMacros: { fontSize: '11px', color: 'var(--muted)', marginRight: '12px', whiteSpace: 'nowrap' },
   useAgainBtn: { padding: '4px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: '5px', color: 'var(--muted)', fontSize: '11px', cursor: 'pointer', flexShrink: 0 },
+  deleteBtn: { padding: '4px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: '5px', color: '#ff8b8b', fontSize: '11px', cursor: 'pointer', flexShrink: 0 },
+
+  calNav: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' },
+  calMonth: { fontFamily: 'Bebas Neue, sans-serif', fontSize: '16px', letterSpacing: '0.04em' },
+  calNavBtn: { background: 'none', border: 'none', color: 'var(--muted)', fontSize: '16px', cursor: 'pointer', padding: '2px 8px' },
+  calGrid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' },
+  calDayLabel: { fontSize: '9px', color: 'var(--dim)', textAlign: 'center', padding: '3px 0', fontWeight: '500' },
+  calCell: { aspectRatio: '1', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '11px', transition: 'background 0.12s', position: 'relative', border: '1px solid transparent' },
+  calCellActive: { background: 'rgba(200,245,90,0.12)', borderColor: 'rgba(200,245,90,0.4)' },
+  calDot: { width: '4px', height: '4px', borderRadius: '50%', background: 'var(--accent)', position: 'absolute', bottom: '4px' },
+  mealDetailRow: { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 0', borderBottom: '1px solid var(--border)' },
 }
 
 export default function NutritionPage() {
@@ -104,6 +121,12 @@ export default function NutritionPage() {
   const [generatingGrocery, setGeneratingGrocery] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  // Section E — meal calendar
+  const now = new Date()
+  const [mealCalYear, setMealCalYear] = useState(now.getFullYear())
+  const [mealCalMonth, setMealCalMonth] = useState(now.getMonth())
+  const [selectedMealDate, setSelectedMealDate] = useState(todayStr())
+
   useEffect(() => { if (user) loadAll() }, [user])
 
   useEffect(() => {
@@ -130,6 +153,14 @@ export default function NutritionPage() {
       .from('meal_history').select('*').eq('user_id', user.id)
       .order('created_at', { ascending: false }).limit(150)
     setAllMeals(data || [])
+  }
+
+  async function deleteMeal(id) {
+    const ok = window.confirm('Delete this meal entry?')
+    if (!ok) return
+    await supabase.from('meal_history').delete().eq('id', id).eq('user_id', user.id)
+    setTodayMeals(prev => prev.filter(m => m.id !== id))
+    setAllMeals(prev => prev.filter(m => m.id !== id))
   }
 
   async function checkSessionToday() {
@@ -262,6 +293,14 @@ export default function NutritionPage() {
     mealsByDate[date].push(m)
   })
   const mealDates = Object.keys(mealsByDate).sort((a, b) => b.localeCompare(a))
+  const mealDateSet = new Set(mealDates)
+
+  useEffect(() => {
+    if (!mealDates.length) return
+    if (!selectedMealDate || !mealDateSet.has(selectedMealDate)) {
+      setSelectedMealDate(mealDates[0])
+    }
+  }, [mealDates.join(','), selectedMealDate])
 
   const focusAccent = e => { e.target.style.borderColor = 'var(--accent)' }
   const blurBorder = e => { e.target.style.borderColor = 'var(--border)' }
@@ -437,29 +476,91 @@ export default function NutritionPage() {
             <span style={s.cardTitle}>Meal history</span>
             <span style={s.label}>{allMeals.length} entries</span>
           </div>
-          {mealDates.map(date => (
-            <div key={date}>
-              <div style={s.historyDate}>
-                {new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}
-              </div>
-              {mealsByDate[date].map(m => (
-                <div key={m.id} style={s.historyRow}>
-                  <span style={s.historyName}>{m.recipe_name || 'Meal'}</span>
-                  <span style={s.historyMacros}>
-                    P:{Math.round(m.protein_g || 0)}g · C:{Math.round(m.carbs_g || 0)}g · F:{Math.round(m.fat_g || 0)}g · {Math.round(m.calories || 0)}kcal
-                  </span>
-                  <button
-                    style={s.useAgainBtn}
-                    onClick={() => generateRecipe(m.recipe_name || '')}
-                    onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)' }}
-                    onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)' }}
+          <div style={s.calNav}>
+            <button
+              style={s.calNavBtn}
+              onClick={() => {
+                const d = new Date(mealCalYear, mealCalMonth - 1, 1)
+                setMealCalYear(d.getFullYear())
+                setMealCalMonth(d.getMonth())
+              }}
+            >
+              ‹
+            </button>
+            <div style={s.calMonth}>{MONTH_NAMES[mealCalMonth]} {mealCalYear}</div>
+            <button
+              style={s.calNavBtn}
+              onClick={() => {
+                const d = new Date(mealCalYear, mealCalMonth + 1, 1)
+                setMealCalYear(d.getFullYear())
+                setMealCalMonth(d.getMonth())
+              }}
+            >
+              ›
+            </button>
+          </div>
+
+          <div style={s.calGrid}>
+            {DAY_NAMES.map(d => <div key={d} style={s.calDayLabel}>{d}</div>)}
+            {(() => {
+              const days = getDaysInMonth(mealCalYear, mealCalMonth)
+              const first = getFirstDayOfMonth(mealCalYear, mealCalMonth)
+              const cells = []
+              for (let i = 0; i < first; i++) cells.push(null)
+              for (let d = 1; d <= days; d++) cells.push(d)
+              return cells.map((d, idx) => {
+                if (!d) return <div key={`empty-${idx}`} />
+                const dateStr = toDateStr(mealCalYear, mealCalMonth, d)
+                const hasMeals = mealDateSet.has(dateStr)
+                const isActive = dateStr === selectedMealDate
+                return (
+                  <div
+                    key={dateStr}
+                    style={{ ...s.calCell, ...(isActive ? s.calCellActive : {}) }}
+                    onClick={() => setSelectedMealDate(dateStr)}
+                    title={hasMeals ? 'Meals logged' : 'No meals logged'}
                   >
-                    Use again
-                  </button>
-                </div>
-              ))}
-            </div>
-          ))}
+                    {d}
+                    {hasMeals && <span style={s.calDot} />}
+                  </div>
+                )
+              })
+            })()}
+          </div>
+
+          <div style={s.historyDate}>
+            {selectedMealDate
+              ? new Date(selectedMealDate + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
+              : 'Select a day'}
+          </div>
+          {(mealsByDate[selectedMealDate] || []).length === 0 ? (
+            <p style={{ fontSize: '13px', color: 'var(--dim)' }}>No meals logged for this day.</p>
+          ) : (
+            (mealsByDate[selectedMealDate] || []).map(m => (
+              <div key={m.id} style={s.mealDetailRow}>
+                <span style={s.historyName}>{m.recipe_name || 'Meal'}</span>
+                <span style={s.historyMacros}>
+                  P:{Math.round(m.protein_g || 0)}g · C:{Math.round(m.carbs_g || 0)}g · F:{Math.round(m.fat_g || 0)}g · {Math.round(m.calories || 0)}kcal
+                </span>
+                <button
+                  style={s.useAgainBtn}
+                  onClick={() => generateRecipe(m.recipe_name || '')}
+                  onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)' }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)' }}
+                >
+                  Use again
+                </button>
+                <button
+                  style={s.deleteBtn}
+                  onClick={() => deleteMeal(m.id)}
+                  onMouseOver={e => { e.currentTarget.style.borderColor = '#ff8b8b'; e.currentTarget.style.color = '#ff8b8b' }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = '#ff8b8b' }}
+                >
+                  Delete
+                </button>
+              </div>
+            ))
+          )}
         </div>
       )}
 

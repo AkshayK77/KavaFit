@@ -206,6 +206,7 @@ export default function ProgressPage() {
 
   // Section B — PRs
   const [prs, setPrs] = useState([])
+  const [showPrs, setShowPrs] = useState(false)
 
   // Section C — measurements
   const [measurements, setMeasurements] = useState([])
@@ -591,9 +592,23 @@ export default function ProgressPage() {
       <div style={s.section}>
         <div style={s.sectionHeaderRow}>
           <span style={s.sectionTitle}>Personal records</span>
-          <span style={{ ...s.sectionLabel }}>{prs.length} exercises</span>
+          <button
+            onClick={() => setShowPrs(v => !v)}
+            style={{
+              ...s.sectionLabel,
+              background: 'transparent',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              padding: '6px 10px',
+              cursor: 'pointer',
+              color: 'var(--dim)',
+            }}
+            aria-expanded={showPrs}
+          >
+            {showPrs ? 'Hide' : 'Show'} ({prs.length})
+          </button>
         </div>
-        {prs.length === 0 ? (
+        {!showPrs ? null : prs.length === 0 ? (
           <p style={{ color: 'var(--dim)', fontSize: '13px' }}>Complete sessions with logged weights to see your PRs here.</p>
         ) : (
           <div style={s.prGrid}>
