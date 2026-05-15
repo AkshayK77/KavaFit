@@ -23,6 +23,17 @@ function todayLabel() {
   return new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
+function weekRangeLabel() {
+  const start = getWeekStart()
+  const startDate = new Date(start + 'T00:00:00')
+  const endDate = new Date(startDate)
+  endDate.setDate(endDate.getDate() + 6)
+  const opts = { day: 'numeric', month: 'short' }
+  const startLabel = startDate.toLocaleDateString('en-GB', opts)
+  const endLabel = endDate.toLocaleDateString('en-GB', opts)
+  return `(${startLabel} - ${endLabel})`
+}
+
 function weekStartFor(dateStr) {
   const d = new Date(dateStr + 'T12:00:00Z')
   const day = d.getUTCDay()
@@ -125,6 +136,7 @@ export default function DashboardPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const isMobile = useIsMobile()
+  const weekRange = weekRangeLabel()
 
   const [profile, setProfile] = useState(null)
   const [streak, setStreak] = useState({ count: 0, isAmber: false })
@@ -421,7 +433,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Muscle heatmap ── */}
-      <div style={s.sectionLabel}>Muscle volume this week</div>
+      <div style={s.sectionLabel}>Muscle volume this week {weekRange}</div>
       <div style={s.heatmapCard}>
         <MuscleHeatmap userId={user.id} />
       </div>

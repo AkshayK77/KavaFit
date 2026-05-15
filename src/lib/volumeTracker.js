@@ -49,7 +49,11 @@ function getWeekStartForDate(dateStr) {
   const d = new Date(dateStr + 'T12:00:00')
   const day = d.getDay()
   const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  return new Date(new Date(d).setDate(diff)).toISOString().split('T')[0]
+  d.setDate(diff)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
 }
 
 export async function updateVolumeLog(userId, sets, dateStr = null) {
@@ -84,6 +88,17 @@ export async function updateVolumeLog(userId, sets, dateStr = null) {
       })
     })
   )
+}
+
+export async function setVolumeManual(userId, muscleGroup, totalSets) {
+  const weekStart = getWeekStart()
+  await supabase.from('muscle_volume_log').upsert({
+    user_id: userId,
+    week_start: weekStart,
+    muscle_group: muscleGroup,
+    total_sets: Math.max(0, totalSets),
+    updated_at: new Date().toISOString(),
+  })
 }
 
 export async function getWeeklyVolume(userId) {
