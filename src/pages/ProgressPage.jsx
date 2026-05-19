@@ -376,10 +376,15 @@ export default function ProgressPage() {
     const file = e.target.files?.[0]
     if (!file) return
     setUploading(true)
-    const ext = file.name.split('.').pop() || 'jpg'
+    const ext = file.name.split('.').pop().toLowerCase() || 'jpg'
     const path = `${user.id}/${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('progress-photos').upload(path, file)
-    if (!error) {
+    const { error } = await supabase.storage
+      .from('progress-photos')
+      .upload(path, file, { contentType: file.type, upsert: false })
+    if (error) {
+      console.error('Photo upload error:', error)
+      alert(`Upload failed: ${error.message}`)
+    } else {
       await supabase.from('progress_photos').insert({ user_id: user.id, date: todayStr(), storage_path: path })
       loadPhotos()
     }

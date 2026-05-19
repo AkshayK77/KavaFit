@@ -297,7 +297,7 @@ const adjBtnStyle = {
 
 // ─── MuscleHeatmap ────────────────────────────────────────────────────────────
 
-export default function MuscleHeatmap({ userId }) {
+export default function MuscleHeatmap({ userId, refreshKey }) {
   const [volumeMap, setVolumeMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [selectedMuscle, setSelectedMuscle] = useState(null)
@@ -314,7 +314,7 @@ export default function MuscleHeatmap({ userId }) {
     })
   }
 
-  useEffect(() => { loadVolume() }, [userId])
+  useEffect(() => { loadVolume() }, [userId, refreshKey])
 
   function handleMuscleClick(muscleGroup) {
     setSelectedMuscle(prev => prev === muscleGroup ? null : muscleGroup)

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { callAgent, parseAgentJSON } from '../lib/geminiAgent'
 import { useToast } from '../components/Toast'
 import { useIsMobile } from '../hooks/useIsMobile'
+import FoodSearch from '../components/FoodSearch'
 
 function todayStr() { return new Date().toISOString().split('T')[0] }
 
@@ -12,6 +13,98 @@ function getFirstDayOfMonth(y, m) { return new Date(y, m, 1).getDay() }
 function toDateStr(y, m, d) { return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}` }
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+function parseQty(quantityStr) {
+  const m = String(quantityStr || '').match(/^(\d+(?:\.\d+)?)(.*)/)
+  if (!m) return { num: null, unit: quantityStr || '' }
+  return { num: parseFloat(m[1]), unit: m[2].trim() }
+}
+
+function RecipeCard({ recipe, onLog, logging, label, accentColor = 'var(--accent)', cardStyle = {} }) {
+  const [qtys, setQtys] = useState(() =>
+    (recipe.ingredients || []).map(ing => parseQty(ing.quantity).num)
+  )
+
+  const originalTotal = (recipe.ingredients || []).reduce((sum, ing) => {
+    const { num } = parseQty(ing.quantity)
+    return sum + (num || 0)
+  }, 0)
+  const newTotal = qtys.reduce((sum, q) => sum + (q || 0), 0)
+  const scale = originalTotal > 0 && newTotal > 0 ? newTotal / originalTotal : 1
+
+  const macros = {
+    protein: Math.round((recipe.proteinG || 0) * scale),
+    carbs: Math.round((recipe.carbsG || 0) * scale),
+    fat: Math.round((recipe.fatG || 0) * scale),
+    calories: Math.round((recipe.calories || 0) * scale),
+  }
+
+  return (
+    <div style={cardStyle}>
+      {label && (
+        <div style={{ fontSize: '9px', fontWeight: '700', letterSpacing: '0.14em', textTransform: 'uppercase', color: accentColor, marginBottom: '6px' }}>
+          {label}
+        </div>
+      )}
+      <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '22px', letterSpacing: '0.04em', marginBottom: '4px' }}>{recipe.recipeName}</div>
+      <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '10px', lineHeight: 1.5 }}>{recipe.steps?.[0] || ''}</div>
+
+      <div style={{ display: 'flex', gap: '20px', marginBottom: '12px', flexWrap: 'wrap' }}>
+        {[
+          { label: 'Protein', val: macros.protein, unit: 'g' },
+          { label: 'Carbs', val: macros.carbs, unit: 'g' },
+          { label: 'Fat', val: macros.fat, unit: 'g' },
+          { label: 'Calories', val: macros.calories, unit: 'kcal' },
+        ].map(item => (
+          <div key={item.label} style={{ fontSize: '12px', color: 'var(--muted)' }}>
+            {item.label}: <span style={{ fontWeight: '600', color: 'var(--text)' }}>{item.val}{item.unit}</span>
+          </div>
+        ))}
+      </div>
+
+      {(recipe.ingredients || []).length > 0 && (
+        <div style={{ marginBottom: '14px' }}>
+          <div style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--dim)', marginBottom: '8px' }}>Ingredients</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            {recipe.ingredients.map((ing, i) => {
+              const { num, unit } = parseQty(ing.quantity)
+              return (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {num !== null ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                      <input
+                        type="number"
+                        min="0"
+                        value={qtys[i] ?? num}
+                        onChange={e => {
+                          const v = parseFloat(e.target.value) || 0
+                          setQtys(prev => prev.map((q, idx) => idx === i ? v : q))
+                        }}
+                        style={{ width: '58px', padding: '3px 6px', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '5px', color: 'var(--text)', fontSize: '12px', outline: 'none', textAlign: 'right' }}
+                      />
+                      {unit && <span style={{ fontSize: '11px', color: 'var(--muted)', minWidth: '16px' }}>{unit}</span>}
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '12px', color: 'var(--muted)', flexShrink: 0 }}>{ing.quantity}</span>
+                  )}
+                  <span style={{ fontSize: '12px', color: 'var(--text)' }}>{ing.item}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      <button
+        style={{ padding: '7px 14px', background: accentColor, border: 'none', borderRadius: '7px', color: '#0a0a0a', fontSize: '12px', fontWeight: '600', cursor: logging ? 'not-allowed' : 'pointer', opacity: logging ? 0.5 : 1 }}
+        onClick={() => onLog(macros)}
+        disabled={logging}
+      >
+        {logging ? 'Logging…' : 'Log this meal'}
+      </button>
+    </div>
+  )
+}
 
 function MacroCard({ label, current, target, color, unit }) {
   const pct = target > 0 ? Math.min(current / target, 1) : 0
@@ -85,8 +178,8 @@ const s = {
   calNavBtn: { background: 'none', border: 'none', color: 'var(--muted)', fontSize: '16px', cursor: 'pointer', padding: '2px 8px' },
   calGrid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' },
   calDayLabel: { fontSize: '9px', color: 'var(--dim)', textAlign: 'center', padding: '3px 0', fontWeight: '500' },
-  calCell: { aspectRatio: '1', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '11px', transition: 'background 0.12s', position: 'relative', border: '1px solid transparent' },
-  calCellActive: { background: 'rgba(200,245,90,0.12)', borderColor: 'rgba(200,245,90,0.4)' },
+  calCell: { aspectRatio: '1', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '11px', transition: 'background 0.12s', position: 'relative', border: 'none' },
+  calCellActive: { background: 'rgba(200,245,90,0.15)', outline: '1px solid rgba(200,245,90,0.5)', borderRadius: '6px' },
   calDot: { width: '4px', height: '4px', borderRadius: '50%', background: 'var(--accent)', position: 'absolute', bottom: '4px' },
   mealDetailRow: { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 0', borderBottom: '1px solid var(--border)' },
 }
@@ -108,14 +201,14 @@ export default function NutritionPage() {
     catch { return Array(10).fill(false) }
   })
 
-  const [showAddMeal, setShowAddMeal] = useState(false)
-  const [addForm, setAddForm] = useState({ name: '', protein: '', carbs: '', fat: '', calories: '' })
-  const [savingMeal, setSavingMeal] = useState(false)
+  const [logTab, setLogTab] = useState('search')
 
   const [ingredients, setIngredients] = useState('')
   const [currentRecipe, setCurrentRecipe] = useState(null)
+  const [altRecipe, setAltRecipe] = useState(null)
   const [generatingRecipe, setGeneratingRecipe] = useState(false)
   const [loggingRecipe, setLoggingRecipe] = useState(false)
+  const [loggingAltRecipe, setLoggingAltRecipe] = useState(false)
 
   const [groceryList, setGroceryList] = useState(null)
   const [generatingGrocery, setGeneratingGrocery] = useState(false)
@@ -128,6 +221,12 @@ export default function NutritionPage() {
   const [selectedMealDate, setSelectedMealDate] = useState(todayStr())
 
   useEffect(() => { if (user) loadAll() }, [user])
+
+  useEffect(() => {
+    const handler = () => { loadTodayMeals(); loadAllMeals() }
+    window.addEventListener('foodLogUpdated', handler)
+    return () => window.removeEventListener('foodLogUpdated', handler)
+  }, [user])
 
   useEffect(() => {
     try { localStorage.setItem(hydrKey, JSON.stringify(hydrationCups)) } catch { /* ignore */ }
@@ -185,24 +284,6 @@ export default function NutritionPage() {
     setHydrationCups(prev => prev.map((v, idx) => idx === i ? !v : v))
   }
 
-  async function saveAddMeal() {
-    if (!addForm.name) return
-    setSavingMeal(true)
-    await supabase.from('meal_history').insert({
-      user_id: user.id,
-      recipe_name: addForm.name,
-      protein_g: parseFloat(addForm.protein) || 0,
-      carbs_g: parseFloat(addForm.carbs) || 0,
-      fat_g: parseFloat(addForm.fat) || 0,
-      calories: parseFloat(addForm.calories) || 0,
-    })
-    setSavingMeal(false)
-    setShowAddMeal(false)
-    setAddForm({ name: '', protein: '', carbs: '', fat: '', calories: '' })
-    loadTodayMeals()
-    loadAllMeals()
-  }
-
   async function generateRecipe(ingredientsOverride) {
     const ing = ingredientsOverride !== undefined ? ingredientsOverride : ingredients
     if (!ing.trim()) return
@@ -217,30 +298,58 @@ export default function NutritionPage() {
     const sessionStr = hasSessionToday
       ? `did train (${todayMuscles.join(', ') || 'general'})`
       : 'did not train'
-    const message = `The user has these ingredients: ${ing.trim()}. Generate a recipe. Their remaining targets today are ${Math.round(remainingCals)} calories and ${Math.round(remainingProtein)}g protein. Their dietary preference is ${profile?.dietary_preference || 'none'} and allergies are ${profile?.allergies || 'none'}. Today they ${sessionStr}.`
+    const allergyStr = profile?.allergies ? ` Avoid allergens: ${profile.allergies}.` : ''
+    const message = `Generate a recipe using EXACTLY these ingredients the user has provided: ${ing.trim()}. Use these ingredients as-is — do not substitute or remove them based on any dietary preference. The user chose these ingredients themselves.${allergyStr} Remaining targets today: ${Math.round(remainingCals)} kcal, ${Math.round(remainingProtein)}g protein. Today they ${sessionStr}.`
+
+    setAltRecipe(null)
     const text = await callAgent(user.id, message, 'recipe')
     const parsed = parseAgentJSON(text)
+
     if (parsed) {
       setCurrentRecipe(parsed)
       showToast('Recipe generated', 'success')
+
+      const targetCals = parsed.calories || Math.round(remainingCals / 3)
+      const targetProtein = parsed.proteinG || Math.round(remainingProtein / 3)
+      const altMessage = `Generate a VEGETARIAN alternative recipe for a single meal. It must closely match these macros: ~${targetCals} kcal and ~${targetProtein}g protein. Replace any non-vegetarian items from these original ingredients (${ing.trim()}) with vegetarian equivalents.${allergyStr} Use realistic, practical portion sizes for one meal — no more than 150–200g of any single ingredient. Today they ${sessionStr}.`
+      const altText = await callAgent(user.id, altMessage, 'recipe')
+      const altParsed = parseAgentJSON(altText)
+      if (altParsed) setAltRecipe(altParsed)
     } else {
       showToast('Could not generate recipe — try again', 'error')
     }
     setGeneratingRecipe(false)
   }
 
-  async function logCurrentRecipe() {
+  async function logCurrentRecipe(macros) {
     if (!currentRecipe) return
     setLoggingRecipe(true)
     await supabase.from('meal_history').insert({
       user_id: user.id,
       recipe_name: currentRecipe.recipeName || 'Generated recipe',
-      protein_g: currentRecipe.proteinG || 0,
-      carbs_g: currentRecipe.carbsG || 0,
-      fat_g: currentRecipe.fatG || 0,
-      calories: currentRecipe.calories || 0,
+      protein_g: macros?.protein ?? currentRecipe.proteinG ?? 0,
+      carbs_g: macros?.carbs ?? currentRecipe.carbsG ?? 0,
+      fat_g: macros?.fat ?? currentRecipe.fatG ?? 0,
+      calories: macros?.calories ?? currentRecipe.calories ?? 0,
     })
     setLoggingRecipe(false)
+    loadTodayMeals()
+    loadAllMeals()
+    showToast('Meal logged', 'success')
+  }
+
+  async function logAltRecipe(macros) {
+    if (!altRecipe) return
+    setLoggingAltRecipe(true)
+    await supabase.from('meal_history').insert({
+      user_id: user.id,
+      recipe_name: altRecipe.recipeName || 'Vegetarian alternative',
+      protein_g: macros?.protein ?? altRecipe.proteinG ?? 0,
+      carbs_g: macros?.carbs ?? altRecipe.carbsG ?? 0,
+      fat_g: macros?.fat ?? altRecipe.fatG ?? 0,
+      calories: macros?.calories ?? altRecipe.calories ?? 0,
+    })
+    setLoggingAltRecipe(false)
     loadTodayMeals()
     loadAllMeals()
     showToast('Meal logged', 'success')
@@ -371,110 +480,84 @@ export default function NutritionPage() {
           </>
         )}
 
-        <button style={s.btnSm} onClick={() => setShowAddMeal(v => !v)}>
-          {showAddMeal ? 'Cancel' : 'Add meal manually'}
-        </button>
+        {/* Log food tabs */}
+        <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+          <div style={{ display: 'flex', gap: '4px', marginBottom: '14px' }}>
+            {[
+              { id: 'search', label: 'Search Foods' },
+              { id: 'describe', label: 'Describe Meal' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setLogTab(tab.id)}
+                style={{
+                  padding: '6px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: '600',
+                  cursor: 'pointer', border: 'none',
+                  background: logTab === tab.id ? 'var(--accent)' : 'var(--surface2)',
+                  color: logTab === tab.id ? '#0a0a0a' : 'var(--muted)',
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-        {showAddMeal && (
-          <div style={s.form}>
-            <div style={s.field}>
-              <span style={s.fieldLabel}>Meal name</span>
+          {logTab === 'search' && (
+            <FoodSearch onLogged={() => { loadTodayMeals(); loadAllMeals() }} />
+          )}
+
+          {logTab === 'describe' && (
+            <div>
+              {currentRecipe && (
+                <RecipeCard
+                  key={currentRecipe.recipeName}
+                  recipe={currentRecipe}
+                  onLog={logCurrentRecipe}
+                  logging={loggingRecipe}
+                  cardStyle={s.recipeCard}
+                />
+              )}
+
+              {altRecipe && (
+                <RecipeCard
+                  key={altRecipe.recipeName}
+                  recipe={altRecipe}
+                  onLog={logAltRecipe}
+                  logging={loggingAltRecipe}
+                  label="Vegetarian Alternative"
+                  accentColor="#6ddc7c"
+                  cardStyle={{ ...s.recipeCard, background: 'linear-gradient(135deg, #001a0d 0%, #0d1a0d 100%)', borderColor: 'rgba(100,220,120,0.2)', marginTop: '12px' }}
+                />
+              )}
+
+              {generatingRecipe && !currentRecipe && (
+                <div style={{ fontSize: '12px', color: 'var(--dim)', marginBottom: '12px' }}>Generating recipes…</div>
+              )}
+              <div style={{ ...s.label, marginBottom: '8px' }}>What ingredients do you have?</div>
               <input
-                placeholder="Chicken & rice"
-                value={addForm.name}
-                onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))}
-                style={{ ...s.inputWide, width: isMobile ? '100%' : '180px' }}
+                placeholder="e.g. chicken breast, rice, broccoli, olive oil"
+                value={ingredients}
+                onChange={e => setIngredients(e.target.value)}
+                style={s.ingredientInput}
                 onFocus={focusAccent} onBlur={blurBorder}
               />
+              <button
+                style={{ ...s.btnAccent, opacity: (generatingRecipe || !ingredients.trim()) ? 0.5 : 1 }}
+                onClick={() => generateRecipe()}
+                disabled={generatingRecipe || !ingredients.trim()}
+              >
+                {generatingRecipe ? 'Generating…' : 'Generate recipe →'}
+              </button>
             </div>
-            {[
-              { key: 'protein', label: 'Protein (g)' },
-              { key: 'carbs', label: 'Carbs (g)' },
-              { key: 'fat', label: 'Fat (g)' },
-              { key: 'calories', label: 'Calories' },
-            ].map(({ key, label }) => (
-              <div key={key} style={s.field}>
-                <span style={s.fieldLabel}>{label}</span>
-                <input
-                  type="number" placeholder="0"
-                  value={addForm[key]}
-                  onChange={e => setAddForm(f => ({ ...f, [key]: e.target.value }))}
-                  style={s.input}
-                  onFocus={focusAccent} onBlur={blurBorder}
-                />
-              </div>
-            ))}
-            <button
-              style={{ ...s.btnAccent, opacity: savingMeal ? 0.5 : 1 }}
-              onClick={saveAddMeal}
-              disabled={savingMeal}
-            >
-              {savingMeal ? 'Saving…' : 'Save'}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* ── SECTION D — Recipe generator ── */}
-      <div style={s.card}>
-        <div style={s.cardHeader}>
-          <span style={s.cardTitle}>Recipe generator</span>
+          )}
         </div>
-
-        {currentRecipe && (
-          <div style={s.recipeCard}>
-            <div style={s.recipeName}>{currentRecipe.recipeName}</div>
-            <div style={s.recipeDesc}>{currentRecipe.steps?.[0] || ''}</div>
-            <div style={s.recipeMacroRow}>
-              {[
-                { label: 'Protein', val: currentRecipe.proteinG, unit: 'g' },
-                { label: 'Carbs', val: currentRecipe.carbsG, unit: 'g' },
-                { label: 'Fat', val: currentRecipe.fatG, unit: 'g' },
-                { label: 'Calories', val: currentRecipe.calories, unit: 'kcal' },
-              ].map(item => (
-                <div key={item.label} style={s.recipeMacroItem}>
-                  {item.label}: <span style={s.recipeMacroVal}>{item.val || 0}{item.unit}</span>
-                </div>
-              ))}
-            </div>
-            {currentRecipe.ingredients?.length > 0 && (
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '12px', lineHeight: 1.6 }}>
-                {currentRecipe.ingredients.map(i => `${i.quantity} ${i.item}`).join(' · ')}
-              </div>
-            )}
-            <button
-              style={{ ...s.btnAccent, fontSize: '12px', padding: '7px 14px', opacity: loggingRecipe ? 0.5 : 1 }}
-              onClick={logCurrentRecipe}
-              disabled={loggingRecipe}
-            >
-              {loggingRecipe ? 'Logging…' : 'Log this meal'}
-            </button>
-          </div>
-        )}
-
-        <div style={{ ...s.label, marginBottom: '8px' }}>What ingredients do you have?</div>
-        <input
-          placeholder="e.g. chicken breast, rice, broccoli, olive oil"
-          value={ingredients}
-          onChange={e => setIngredients(e.target.value)}
-          style={s.ingredientInput}
-          onFocus={focusAccent} onBlur={blurBorder}
-        />
-        <button
-          style={{ ...s.btnAccent, opacity: (generatingRecipe || !ingredients.trim()) ? 0.5 : 1 }}
-          onClick={() => generateRecipe()}
-          disabled={generatingRecipe || !ingredients.trim()}
-        >
-          {generatingRecipe ? 'Generating…' : 'Generate recipe →'}
-        </button>
       </div>
 
       {/* ── SECTION E — Meal history ── */}
-      {allMeals.length > 0 && (
-        <div style={s.card}>
+      <div style={s.card}>
           <div style={s.cardHeader}>
             <span style={s.cardTitle}>Meal history</span>
-            <span style={s.label}>{allMeals.length} entries</span>
+            {allMeals.length > 0 && <span style={s.label}>{allMeals.length} entries</span>}
           </div>
           <div style={s.calNav}>
             <button
@@ -562,7 +645,6 @@ export default function NutritionPage() {
             ))
           )}
         </div>
-      )}
 
       {/* ── SECTION F — Grocery list ── */}
       <div style={s.card}>

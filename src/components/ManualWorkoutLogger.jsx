@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from './Toast'
-import { updateVolumeLog } from '../lib/volumeTracker'
+import { updateVolumeLog, subtractVolumeLog } from '../lib/volumeTracker'
 import { classifyExercise } from '../lib/exerciseClassifier'
 
 function todayStr() {
@@ -18,12 +18,32 @@ const s = {
   },
   card: {
     background: 'var(--surface2)', border: '1px solid var(--border2)',
-    borderRadius: '14px', padding: '28px',
-    maxWidth: '540px', width: '100%', maxHeight: '90vh', overflowY: 'auto',
-    display: 'flex', flexDirection: 'column', gap: '20px',
+    borderRadius: '14px', padding: '0',
+    maxWidth: '540px', width: '100%', maxHeight: '90vh',
+    display: 'flex', flexDirection: 'column',
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    padding: '24px 28px 20px',
+    borderBottom: '1px solid var(--border)',
+    flexShrink: 0,
+  },
+  cardBody: {
+    padding: '20px 28px',
+    overflowY: 'auto',
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '18px',
+  },
+  cardFooter: {
+    padding: '16px 28px',
+    borderTop: '1px solid var(--border)',
+    flexShrink: 0,
+    background: 'var(--surface2)',
   },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
-  title: { fontFamily: 'Bebas Neue, sans-serif', fontSize: '28px', letterSpacing: '0.04em', color: 'var(--accent)' },
+  title: { fontFamily: 'Bebas Neue, sans-serif', fontSize: '26px', letterSpacing: '0.04em', color: 'var(--accent)' },
   closeBtn: { background: 'none', border: 'none', color: 'var(--muted)', fontSize: '18px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 },
   label: { fontSize: '11px', fontWeight: '700', letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: '6px', display: 'block' },
   input: {
@@ -84,12 +104,18 @@ const s = {
     cursor: 'pointer', width: '100%', transition: 'opacity 0.15s',
   },
   saveBtnDisabled: { opacity: 0.45, pointerEvents: 'none' },
-  emptyExercises: { fontSize: '13px', color: 'var(--dim)', textAlign: 'center', padding: '16px 0' },
+  emptyExercises: { fontSize: '13px', color: 'var(--dim)', textAlign: 'center', padding: '12px 0' },
+  sectionLabel: {
+    fontSize: '10px', fontWeight: '700', letterSpacing: '0.1em',
+    textTransform: 'uppercase', color: 'var(--dim)', marginBottom: '10px',
+  },
 }
 
-export default function ManualWorkoutLogger({ onClose, onSaved }) {
-  const { user } = useAuth()
+export default function ManualWorkoutLogger({ onClose, onSaved, editSessionId = null }) {
+  const { user, triggerHeatmapRefresh } = useAuth()
   const { showToast } = useToast()
+
+  const isEditing = !!editSessionId
 
   const [sessionName, setSessionName] = useState('')
   const [selectedDate, setSelectedDate] = useState(todayStr())
@@ -99,8 +125,66 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [classifying, setClassifying] = useState({}) // tempId → true while classifying
+  const [loadingEdit, setLoadingEdit] = useState(isEditing)
+  const [classifying, setClassifying] = useState({})
   const searchTimeout = useRef(null)
+  const originalDateRef = useRef(selectedDate)
+
+  useEffect(() => {
+    if (!editSessionId) return
+    loadEditSession()
+  }, [editSessionId])
+
+  async function loadEditSession() {
+    setLoadingEdit(true)
+    try {
+      const { data: sess } = await supabase
+        .from('sessions')
+        .select('id, name, date, duration_minutes')
+        .eq('id', editSessionId)
+        .single()
+
+      if (sess) {
+        setSessionName(sess.name || '')
+        setSelectedDate(sess.date || todayStr())
+        setDurationMinutes(sess.duration_minutes?.toString() || '')
+        originalDateRef.current = sess.date || todayStr()
+      }
+
+      const { data: sets } = await supabase
+        .from('session_sets')
+        .select('exercise_id, set_number, weight_kg, reps')
+        .eq('session_id', editSessionId)
+        .eq('completed', true)
+        .order('set_number')
+
+      if (sets?.length) {
+        const exIds = [...new Set(sets.map(s => s.exercise_id))]
+        const { data: exs } = await supabase
+          .from('exercises')
+          .select('id, name, muscle_groups')
+          .in('id', exIds)
+        const exMap = {}
+        exs?.forEach(ex => { exMap[ex.id] = ex })
+
+        const grouped = {}
+        const order = []
+        sets.forEach(s => {
+          if (!grouped[s.exercise_id]) {
+            grouped[s.exercise_id] = { exercise: exMap[s.exercise_id] || { id: s.exercise_id, name: 'Unknown', muscle_groups: [] }, sets: [] }
+            order.push(s.exercise_id)
+          }
+          grouped[s.exercise_id].sets.push({ weight: s.weight_kg?.toString() || '', reps: s.reps?.toString() || '' })
+        })
+        setExercises(order.map(id => grouped[id]))
+      }
+    } catch (err) {
+      console.error('Failed to load session for editing:', err)
+      showToast('Failed to load session', 'error')
+    } finally {
+      setLoadingEdit(false)
+    }
+  }
 
   useEffect(() => {
     if (!searchQuery.trim()) { setSearchResults([]); return }
@@ -147,14 +231,10 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
   }
 
   function updateSet(exIdx, setIdx, field, value) {
-    setExercises(prev => {
-      const next = prev.map((ex, i) => {
-        if (i !== exIdx) return ex
-        const newSets = ex.sets.map((s, si) => si === setIdx ? { ...s, [field]: value } : s)
-        return { ...ex, sets: newSets }
-      })
-      return next
-    })
+    setExercises(prev => prev.map((ex, i) => {
+      if (i !== exIdx) return ex
+      return { ...ex, sets: ex.sets.map((s, si) => si === setIdx ? { ...s, [field]: value } : s) }
+    }))
   }
 
   function addSet(exIdx) {
@@ -171,6 +251,11 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
     }))
   }
 
+  function countFilledSets() {
+    return exercises.reduce((total, ex) =>
+      total + ex.sets.filter(s => String(s.reps || '').trim() !== '').length, 0)
+  }
+
   function isValid() {
     if (!sessionName.trim() || !selectedDate) return false
     return exercises.some(ex => ex.sets.some(s => String(s.reps || '').trim() !== ''))
@@ -179,19 +264,35 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
   async function resolveExerciseId(ex) {
     if (!ex.isCustom) return ex.id
     const { data: existing } = await supabase
-      .from('exercises')
-      .select('id')
-      .ilike('name', ex.name)
-      .limit(1)
-      .maybeSingle()
+      .from('exercises').select('id').ilike('name', ex.name).limit(1).maybeSingle()
     if (existing) return existing.id
     const { data: created, error } = await supabase
-      .from('exercises')
-      .insert({ name: ex.name, muscle_groups: ex.muscle_groups || [] })
-      .select('id')
-      .single()
+      .from('exercises').insert({ name: ex.name, muscle_groups: ex.muscle_groups || [] }).select('id').single()
     if (error) throw error
     return created.id
+  }
+
+  function buildInsertSets(sessionId, resolvedExercises) {
+    const allInsertSets = []
+    const setsForVolume = []
+    resolvedExercises.forEach(ex => {
+      ex.sets.forEach((s, si) => {
+        const repsStr = String(s.reps || '').trim()
+        if (!repsStr) return
+        const repsNum = parseInt(repsStr)
+        const weightNum = parseFloat(s.weight) || null
+        allInsertSets.push({
+          session_id: sessionId,
+          exercise_id: ex.exercise.id,
+          set_number: si + 1,
+          weight_kg: weightNum,
+          reps: isNaN(repsNum) ? null : repsNum,
+          completed: true,
+        })
+        setsForVolume.push({ muscle_groups: ex.exercise.muscle_groups || [] })
+      })
+    })
+    return { allInsertSets, setsForVolume }
   }
 
   async function handleSave() {
@@ -199,16 +300,12 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
     setSaving(true)
     try {
       const name = sessionName.trim()
-
-      // Resolve any custom exercises to real DB IDs first
       const resolvedExercises = await Promise.all(
         exercises.map(async ex => ({
           ...ex,
           exercise: { ...ex.exercise, id: await resolveExerciseId(ex.exercise) },
         }))
       )
-
-      const exerciseIds = resolvedExercises.map(ex => ex.exercise.id)
 
       const { data: sessionRow, error: sessionErr } = await supabase
         .from('sessions')
@@ -217,35 +314,14 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
           date: selectedDate,
           name,
           plan_day_id: null,
-          notes: JSON.stringify({ sessionName: name, generatedExerciseIds: exerciseIds }),
           completed_at: new Date(selectedDate + 'T12:00:00').toISOString(),
           duration_minutes: durationMinutes !== '' ? parseInt(durationMinutes) || null : null,
         })
-        .select('id')
-        .single()
+        .select('id').single()
 
       if (sessionErr) throw sessionErr
 
-      const allInsertSets = []
-      const setsForVolume = []
-
-      resolvedExercises.forEach(ex => {
-        ex.sets.forEach((s, si) => {
-          const repsStr = String(s.reps || '').trim()
-          if (!repsStr) return
-          const repsNum = parseInt(repsStr)
-          const weightNum = parseFloat(s.weight) || null
-          allInsertSets.push({
-            session_id: sessionRow.id,
-            exercise_id: ex.exercise.id,
-            set_number: si + 1,
-            weight_kg: weightNum,
-            reps: isNaN(repsNum) ? null : repsNum,
-            completed: true,
-          })
-          setsForVolume.push({ muscle_groups: ex.exercise.muscle_groups || [] })
-        })
-      })
+      const { allInsertSets, setsForVolume } = buildInsertSets(sessionRow.id, resolvedExercises)
 
       if (allInsertSets.length > 0) {
         const { error: setsErr } = await supabase.from('session_sets').insert(allInsertSets)
@@ -253,12 +329,76 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
         await updateVolumeLog(user.id, setsForVolume, selectedDate)
       }
 
-      showToast('Workout logged successfully', 'success')
+      triggerHeatmapRefresh()
+      showToast('Session logged successfully', 'success')
       onSaved?.()
       onClose()
     } catch (err) {
-      console.error('Failed to log manual workout:', err)
-      showToast('Failed to save workout', 'error')
+      console.error('Failed to log workout:', err)
+      showToast('Failed to save session', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleUpdate() {
+    if (!isValid() || saving) return
+    setSaving(true)
+    try {
+      const name = sessionName.trim()
+
+      // Fetch old sets to subtract their volume contribution
+      const { data: oldSets } = await supabase
+        .from('session_sets')
+        .select('exercise_id')
+        .eq('session_id', editSessionId)
+        .eq('completed', true)
+
+      let oldSetsForVolume = []
+      if (oldSets?.length) {
+        const oldExIds = [...new Set(oldSets.map(s => s.exercise_id))]
+        const { data: oldExs } = await supabase
+          .from('exercises').select('id, muscle_groups').in('id', oldExIds)
+        const exMgMap = {}
+        oldExs?.forEach(ex => { exMgMap[ex.id] = ex.muscle_groups || [] })
+        oldSetsForVolume = oldSets.map(s => ({ muscle_groups: exMgMap[s.exercise_id] || [] }))
+      }
+
+      const resolvedExercises = await Promise.all(
+        exercises.map(async ex => ({
+          ...ex,
+          exercise: { ...ex.exercise, id: await resolveExerciseId(ex.exercise) },
+        }))
+      )
+
+      // Update session row
+      await supabase.from('sessions').update({
+        name,
+        date: selectedDate,
+        duration_minutes: durationMinutes !== '' ? parseInt(durationMinutes) || null : null,
+        completed_at: new Date(selectedDate + 'T12:00:00').toISOString(),
+      }).eq('id', editSessionId)
+
+      // Replace sets
+      await supabase.from('session_sets').delete().eq('session_id', editSessionId)
+      const { allInsertSets, setsForVolume } = buildInsertSets(editSessionId, resolvedExercises)
+      if (allInsertSets.length > 0) {
+        await supabase.from('session_sets').insert(allInsertSets)
+      }
+
+      // Recalculate volume: subtract old, add new
+      await subtractVolumeLog(user.id, oldSetsForVolume, originalDateRef.current)
+      if (setsForVolume.length > 0) {
+        await updateVolumeLog(user.id, setsForVolume, selectedDate)
+      }
+
+      triggerHeatmapRefresh()
+      showToast('Session updated', 'success')
+      onSaved?.()
+      onClose()
+    } catch (err) {
+      console.error('Failed to update session:', err)
+      showToast('Failed to update session', 'error')
     } finally {
       setSaving(false)
     }
@@ -274,203 +414,218 @@ export default function ManualWorkoutLogger({ onClose, onSaved }) {
   const showCustomOption = trimmedQuery.length > 1 && !searching &&
     !exercises.some(e => e.exercise.name.toLowerCase() === trimmedQuery.toLowerCase())
   const showDropdown = searching || searchResults.length > 0 || showCustomOption
+  const filledSets = countFilledSets()
+  const valid = isValid()
+
+  if (loadingEdit) {
+    return (
+      <div style={s.overlay}>
+        <div style={{ ...s.card, alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
+          <div style={{ color: 'var(--muted)', fontSize: '13px' }}>Loading session…</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={s.card}>
-        <div style={s.header}>
-          <div>
-            <div style={s.title}>Log Workout</div>
-            <div style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '4px' }}>
-              Record a past or missed session
+
+        {/* ── header ── */}
+        <div style={s.cardHeader}>
+          <div style={s.header}>
+            <div>
+              <div style={s.title}>{isEditing ? 'Edit Session' : 'Log Session'}</div>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '3px' }}>
+                {isEditing ? 'Update exercises and sets, then save' : 'Add all exercises from your session, then save'}
+              </div>
+            </div>
+            <button style={s.closeBtn} onClick={onClose}>✕</button>
+          </div>
+        </div>
+
+        {/* ── scrollable body ── */}
+        <div style={s.cardBody}>
+
+          {/* Session name + date */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', alignItems: 'end' }}>
+            <div>
+              <label style={s.label}>Session name</label>
+              <input
+                style={s.input}
+                placeholder="e.g. Push Day, Upper Body…"
+                value={sessionName}
+                onChange={e => setSessionName(e.target.value)}
+                onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
+            </div>
+            <div>
+              <label style={s.label}>Date</label>
+              <input
+                type="date"
+                style={{ ...s.input, width: 'auto' }}
+                value={selectedDate}
+                max={todayStr()}
+                onChange={e => setSelectedDate(e.target.value)}
+                onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
             </div>
           </div>
-          <button style={s.closeBtn} onClick={onClose}>✕</button>
-        </div>
 
-        <div style={s.divider} />
-
-        {/* Session name + date */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', alignItems: 'end' }}>
+          {/* Duration */}
           <div>
-            <label style={s.label}>Session name</label>
-            <input
-              style={s.input}
-              placeholder="e.g. Push Day, Upper Body…"
-              value={sessionName}
-              onChange={e => setSessionName(e.target.value)}
-              onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-              onBlur={e => e.target.style.borderColor = 'var(--border)'}
-            />
+            <label style={s.label}>Duration (optional)</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="number" min="1" max="300" placeholder="—"
+                style={{ ...s.input, width: '80px', textAlign: 'center' }}
+                value={durationMinutes}
+                onChange={e => setDurationMinutes(e.target.value)}
+                onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
+              <span style={{ fontSize: '13px', color: 'var(--muted)' }}>minutes</span>
+            </div>
           </div>
+
+          <div style={s.divider} />
+
+          {/* Exercise search */}
           <div>
-            <label style={s.label}>Date</label>
-            <input
-              type="date"
-              style={{ ...s.input, width: 'auto' }}
-              value={selectedDate}
-              max={todayStr()}
-              onChange={e => setSelectedDate(e.target.value)}
-              onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-              onBlur={e => e.target.style.borderColor = 'var(--border)'}
-            />
+            <label style={s.label}>Add exercises</label>
+            <div style={s.searchWrap}>
+              <input
+                style={s.input}
+                placeholder="Search or type any exercise name…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+                onBlur={e => { e.target.style.borderColor = 'var(--border)'; setTimeout(() => setSearchResults([]), 150) }}
+              />
+              {showDropdown && (
+                <div style={s.dropdown}>
+                  {searching && (
+                    <div style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--muted)' }}>Searching…</div>
+                  )}
+                  {searchResults.map(ex => (
+                    <div
+                      key={ex.id}
+                      style={s.dropdownItem}
+                      onMouseDown={() => addExercise(ex)}
+                      onMouseOver={e => e.currentTarget.style.background = 'var(--surface2)'}
+                      onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <div style={{ fontWeight: '500' }}>{ex.name}</div>
+                      {ex.muscle_groups?.length > 0 && (
+                        <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
+                          {formatMuscles(ex.muscle_groups)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {showCustomOption && (
+                    <div
+                      style={s.dropdownCustom}
+                      onMouseDown={() => addCustomExercise(trimmedQuery)}
+                      onMouseOver={e => e.currentTarget.style.background = 'var(--surface2)'}
+                      onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <span style={{ fontSize: '16px', lineHeight: 1 }}>+</span>
+                      <span>Add "<strong>{trimmedQuery}</strong>" as new exercise</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Duration */}
-        <div>
-          <label style={s.label}>Duration (optional)</label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              type="number"
-              min="1"
-              max="300"
-              placeholder="—"
-              style={{ ...s.input, width: '80px', textAlign: 'center' }}
-              value={durationMinutes}
-              onChange={e => setDurationMinutes(e.target.value)}
-              onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-              onBlur={e => e.target.style.borderColor = 'var(--border)'}
-            />
-            <span style={{ fontSize: '13px', color: 'var(--muted)' }}>minutes</span>
-          </div>
-        </div>
-
-        <div style={s.divider} />
-
-        {/* Exercise search */}
-        <div>
-          <label style={s.label}>Add exercises</label>
-          <div style={s.searchWrap}>
-            <input
-              style={s.input}
-              placeholder="Search or type any exercise name…"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-              onBlur={e => { e.target.style.borderColor = 'var(--border)'; setTimeout(() => setSearchResults([]), 150) }}
-            />
-            {showDropdown && (
-              <div style={s.dropdown}>
-                {searching && (
-                  <div style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--muted)' }}>
-                    Searching…
-                  </div>
-                )}
-                {searchResults.map(ex => (
-                  <div
-                    key={ex.id}
-                    style={s.dropdownItem}
-                    onMouseDown={() => addExercise(ex)}
-                    onMouseOver={e => e.currentTarget.style.background = 'var(--surface2)'}
-                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <div style={{ fontWeight: '500' }}>{ex.name}</div>
-                    {ex.muscle_groups?.length > 0 && (
-                      <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
-                        {formatMuscles(ex.muscle_groups)}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {showCustomOption && (
-                  <div
-                    style={s.dropdownCustom}
-                    onMouseDown={() => addCustomExercise(trimmedQuery)}
-                    onMouseOver={e => e.currentTarget.style.background = 'var(--surface2)'}
-                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <span style={{ fontSize: '16px', lineHeight: 1 }}>+</span>
-                    <span>Add "<strong>{trimmedQuery}</strong>" as new exercise</span>
-                  </div>
-                )}
+          {/* Exercise blocks */}
+          {exercises.length === 0 ? (
+            <div style={s.emptyExercises}>Search above to add exercises, or type a name to create a custom one</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={s.sectionLabel}>
+                Exercises added ({exercises.length})
               </div>
-            )}
-          </div>
+              {exercises.map((ex, exIdx) => (
+                <div key={ex.exercise.id} style={s.exBlock}>
+                  <div style={s.exBlockHeader}>
+                    <div>
+                      <div style={s.exName}>{ex.exercise.name}</div>
+                      {ex.exercise.isCustom && (
+                        classifying[ex.exercise.id]
+                          ? <div style={s.exCustomBadge}>Identifying muscles…</div>
+                          : ex.exercise.muscle_groups?.length > 0
+                            ? <div style={s.exMuscles}>{ex.exercise.muscle_groups.join(', ')}</div>
+                            : <div style={s.exCustomBadge}>Custom · no muscles identified</div>
+                      )}
+                      {!ex.exercise.isCustom && ex.exercise.muscle_groups?.length > 0 && (
+                        <div style={s.exMuscles}>{formatMuscles(ex.exercise.muscle_groups)}</div>
+                      )}
+                    </div>
+                    <button style={s.removeExBtn} onClick={() => removeExercise(exIdx)}>✕</button>
+                  </div>
+
+                  <div style={s.setHeadRow}>
+                    <div style={s.setColLabel}>Set</div>
+                    <div style={s.setColLabel}>Weight (kg)</div>
+                    <div style={s.setColLabel}>Reps</div>
+                    <div />
+                  </div>
+
+                  {ex.sets.map((set, setIdx) => (
+                    <div key={setIdx} style={s.setRow}>
+                      <div style={s.setNum}>{setIdx + 1}</div>
+                      <input
+                        type="number" min="0" step="0.5" placeholder="—"
+                        style={s.setInput}
+                        value={set.weight}
+                        onChange={e => updateSet(exIdx, setIdx, 'weight', e.target.value)}
+                        onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+                        onBlur={e => e.target.style.borderColor = 'var(--border)'}
+                      />
+                      <input
+                        type="number" min="1" step="1" placeholder="—"
+                        style={s.setInput}
+                        value={set.reps}
+                        onChange={e => updateSet(exIdx, setIdx, 'reps', e.target.value)}
+                        onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+                        onBlur={e => e.target.style.borderColor = 'var(--border)'}
+                      />
+                      <button style={s.removeSetBtn} onClick={() => removeSet(exIdx, setIdx)} title="Remove set">✕</button>
+                    </div>
+                  ))}
+
+                  <div style={s.addSetRow}>
+                    <button style={s.addSetBtn} onClick={() => addSet(exIdx)}>+ Add set</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Exercise blocks */}
-        {exercises.length === 0 ? (
-          <div style={s.emptyExercises}>Search above to add exercises, or type a name to create a custom one</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {exercises.map((ex, exIdx) => (
-              <div key={ex.exercise.id} style={s.exBlock}>
-                <div style={s.exBlockHeader}>
-                  <div>
-                    <div style={s.exName}>{ex.exercise.name}</div>
-                    {ex.exercise.isCustom && (
-                      classifying[ex.exercise.id]
-                        ? <div style={s.exCustomBadge}>Identifying muscles…</div>
-                        : ex.exercise.muscle_groups?.length > 0
-                          ? <div style={s.exMuscles}>{ex.exercise.muscle_groups.join(', ')}</div>
-                          : <div style={s.exCustomBadge}>Custom · no muscles identified</div>
-                    )}
-                    {!ex.exercise.isCustom && ex.exercise.muscle_groups?.length > 0 && (
-                      <div style={s.exMuscles}>{formatMuscles(ex.exercise.muscle_groups)}</div>
-                    )}
-                  </div>
-                  <button style={s.removeExBtn} onClick={() => removeExercise(exIdx)}>✕</button>
-                </div>
-
-                <div style={s.setHeadRow}>
-                  <div style={s.setColLabel}>Set</div>
-                  <div style={s.setColLabel}>Weight (kg)</div>
-                  <div style={s.setColLabel}>Reps</div>
-                  <div />
-                </div>
-
-                {ex.sets.map((set, setIdx) => (
-                  <div key={setIdx} style={s.setRow}>
-                    <div style={s.setNum}>{setIdx + 1}</div>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      placeholder="—"
-                      style={s.setInput}
-                      value={set.weight}
-                      onChange={e => updateSet(exIdx, setIdx, 'weight', e.target.value)}
-                      onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-                      onBlur={e => e.target.style.borderColor = 'var(--border)'}
-                    />
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      placeholder="—"
-                      style={s.setInput}
-                      value={set.reps}
-                      onChange={e => updateSet(exIdx, setIdx, 'reps', e.target.value)}
-                      onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-                      onBlur={e => e.target.style.borderColor = 'var(--border)'}
-                    />
-                    <button
-                      style={s.removeSetBtn}
-                      onClick={() => removeSet(exIdx, setIdx)}
-                      title="Remove set"
-                    >✕</button>
-                  </div>
-                ))}
-
-                <div style={s.addSetRow}>
-                  <button style={s.addSetBtn} onClick={() => addSet(exIdx)}>+ Add set</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div style={s.divider} />
-
-        <button
-          style={{ ...s.saveBtn, ...(!isValid() || saving ? s.saveBtnDisabled : {}) }}
-          onClick={handleSave}
-          onMouseOver={e => isValid() && !saving && (e.currentTarget.style.opacity = '0.85')}
-          onMouseOut={e => e.currentTarget.style.opacity = '1'}
-        >
-          {saving ? 'Saving…' : 'Save Workout'}
-        </button>
+        {/* ── sticky footer ── */}
+        <div style={s.cardFooter}>
+          {valid && (
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '10px', textAlign: 'center' }}>
+              {exercises.length} exercise{exercises.length !== 1 ? 's' : ''} · {filledSets} set{filledSets !== 1 ? 's' : ''} ready to save
+            </div>
+          )}
+          <button
+            style={{ ...s.saveBtn, ...(!valid || saving ? s.saveBtnDisabled : {}) }}
+            onClick={isEditing ? handleUpdate : handleSave}
+            onMouseOver={e => valid && !saving && (e.currentTarget.style.opacity = '0.85')}
+            onMouseOut={e => e.currentTarget.style.opacity = '1'}
+          >
+            {saving
+              ? (isEditing ? 'Updating…' : 'Saving…')
+              : (isEditing ? 'Update Session' : 'Save Session')
+            }
+          </button>
+        </div>
       </div>
     </div>
   )

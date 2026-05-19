@@ -38,7 +38,7 @@ function mapToVolumeGroup(mgRaw) {
 export function getVolumeStatus(muscleGroup, totalSets) {
   const t = VOLUME_THRESHOLDS[muscleGroup]
   if (!t) return 'none'
-  if (totalSets < t.min * 0.6) return 'none'
+  if (totalSets === 0) return 'none'
   if (totalSets < t.min) return 'low'
   if (totalSets <= t.max) return 'optimal'
   return 'high'
@@ -85,7 +85,39 @@ export async function updateVolumeLog(userId, sets, dateStr = null) {
         muscle_group: mg,
         total_sets: (existing?.total_sets || 0) + count,
         updated_at: new Date().toISOString(),
-      })
+      }, { onConflict: 'user_id,week_start,muscle_group' })
+    })
+  )
+}
+
+export async function subtractVolumeLog(userId, sets, dateStr = null) {
+  if (!sets || sets.length === 0) return
+  const weekStart = dateStr ? getWeekStartForDate(dateStr) : getWeekStart()
+  const counts = {}
+  sets.forEach(set => {
+    (set.muscle_groups || []).forEach(mg => {
+      const mapped = mapToVolumeGroup(mg)
+      if (!mapped) return
+      counts[mapped] = (counts[mapped] || 0) + 1
+    })
+  })
+  await Promise.all(
+    Object.entries(counts).map(async ([mg, count]) => {
+      const { data: existing } = await supabase
+        .from('muscle_volume_log')
+        .select('total_sets')
+        .eq('user_id', userId)
+        .eq('week_start', weekStart)
+        .eq('muscle_group', mg)
+        .maybeSingle()
+      if (!existing) return
+      await supabase.from('muscle_volume_log').upsert({
+        user_id: userId,
+        week_start: weekStart,
+        muscle_group: mg,
+        total_sets: Math.max(0, (existing.total_sets || 0) - count),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,week_start,muscle_group' })
     })
   )
 }
@@ -98,7 +130,7 @@ export async function setVolumeManual(userId, muscleGroup, totalSets) {
     muscle_group: muscleGroup,
     total_sets: Math.max(0, totalSets),
     updated_at: new Date().toISOString(),
-  })
+  }, { onConflict: 'user_id,week_start,muscle_group' })
 }
 
 export async function getWeeklyVolume(userId) {

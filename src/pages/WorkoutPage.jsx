@@ -225,7 +225,7 @@ const s = {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function WorkoutPage() {
-  const { user, workoutUpdate, setWorkoutUpdate, setActiveSessionExercises } = useAuth()
+  const { user, workoutUpdate, setWorkoutUpdate, setActiveSessionExercises, triggerHeatmapRefresh } = useAuth()
   const navigate = useNavigate()
   const { showToast } = useToast()
   const isMobile = useIsMobile()
@@ -233,9 +233,12 @@ export default function WorkoutPage() {
   // Mode A state
   const [plan, setPlan] = useState(null)
   const [planDays, setPlanDays] = useState([])
-  const [todayDay, setTodayDay] = useState(null)
+  const [selectedDay, setSelectedDay] = useState(null)
+  const [completedDayIds, setCompletedDayIds] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [recentSessions, setRecentSessions] = useState([])
+  const [editSessionId, setEditSessionId] = useState(null)
 
   // Mode B state
   const [mode, setMode] = useState('A')
@@ -354,7 +357,8 @@ export default function WorkoutPage() {
 
   async function loadPlanData() {
     setLoading(true)
-    const [{ data: prof }, { data: planData }] = await Promise.all([
+    const weekStart = getWeekStart()
+    const [{ data: prof }, { data: planData }, { data: completedSessions }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase
         .from('workout_plans')
@@ -363,15 +367,33 @@ export default function WorkoutPage() {
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
+      supabase
+        .from('sessions')
+        .select('plan_day_id')
+        .eq('user_id', user.id)
+        .gte('date', weekStart)
+        .not('completed_at', 'is', null)
+        .not('plan_day_id', 'is', null),
     ])
     setProfile(prof)
+    setCompletedDayIds(new Set((completedSessions || []).map(s => s.plan_day_id)))
+
+    const { data: recent } = await supabase
+      .from('sessions')
+      .select('id, name, date, duration_minutes')
+      .eq('user_id', user.id)
+      .not('completed_at', 'is', null)
+      .order('date', { ascending: false })
+      .limit(5)
+    setRecentSessions(recent || [])
+
     if (planData) {
       setPlan(planData)
       const days = (planData.plan_days || []).sort((a, b) => a.day_order - b.day_order)
       setPlanDays(days)
       const dow = new Date().getDay()
       const idx = dow === 0 ? days.length - 1 : Math.min(dow - 1, days.length - 1)
-      setTodayDay(days[idx] ?? days[0])
+      setSelectedDay(days[idx] ?? days[0])
     }
     setLoading(false)
   }
@@ -538,22 +560,21 @@ export default function WorkoutPage() {
 
   // ── Mode A actions ────────────────────────────────────────────────────────
 
-  async function handleLoadTemplate() {
-    if (!todayDay) return
-    const exerciseConfigs = todayDay.exercise_ids || []
+  async function handleLoadTemplate(dayOverride) {
+    const day = dayOverride ?? selectedDay
+    if (!day) return
+    const exerciseConfigs = day.exercise_ids || []
     if (!exerciseConfigs.length) return
 
     const ids = exerciseConfigs.map(e => e.exerciseId || e).filter(Boolean)
     const { data: exercises } = await supabase.from('exercises').select('*').in('id', ids)
     if (!exercises) return
 
-    // Fetch previous sets for each exercise
     const prevSetsMap = await fetchPreviousSets(ids)
 
-    // Create session row
     const { data: sess } = await supabase
       .from('sessions')
-      .insert({ user_id: user.id, plan_day_id: todayDay.id, date: today() })
+      .insert({ user_id: user.id, plan_day_id: day.id, date: today() })
       .select()
       .single()
 
@@ -580,7 +601,7 @@ export default function WorkoutPage() {
     )
     const sessionExsWithHints = sessionExs.map((ex, i) => ({ ...ex, progressionHint: hints[i] }))
 
-    setActiveSession({ id: sess.id, name: todayDay.day_name })
+    setActiveSession({ id: sess.id, name: day.day_name, planDayId: day.id })
     setSessionExercises(sessionExsWithHints)
     setActiveSessionExercises(sessionExsWithHints.map(ex => ex.exercise))
     setExerciseDone({})
@@ -834,6 +855,9 @@ export default function WorkoutPage() {
       }
       setActiveSessionExercises([])
       setWarmup(null)
+      if (activeSession.planDayId) {
+        setCompletedDayIds(prev => new Set([...prev, activeSession.planDayId]))
+      }
       setCompletionData({ durationMinutes, totalSets: allSets.length, totalExercises: new Set(allSets.map(s => s.exercise_id)).size, prs: [] })
       setCompleted(true)
       setMode('A')
@@ -894,11 +918,15 @@ export default function WorkoutPage() {
 
     setActiveSessionExercises([])
     setWarmup(null)
+    if (activeSession.planDayId) {
+      setCompletedDayIds(prev => new Set([...prev, activeSession.planDayId]))
+    }
     setCompletionData({ durationMinutes, totalSets, totalExercises, prs })
     setCompleted(true)
     setMode('A')
     clearPersistedSession()
     resetActiveSessionState()
+    triggerHeatmapRefresh()
     showToast(prs.length > 0 ? `Session complete — ${prs.length} new PR${prs.length > 1 ? 's' : ''}!` : 'Session complete', 'success')
 
     if (prs.length > 0) {
@@ -918,7 +946,15 @@ export default function WorkoutPage() {
   const logModal = showLogModal && (
     <ManualWorkoutLogger
       onClose={() => setShowLogModal(false)}
-      onSaved={() => setShowLogModal(false)}
+      onSaved={() => { setShowLogModal(false); loadPlanData() }}
+    />
+  )
+
+  const editModal = editSessionId && (
+    <ManualWorkoutLogger
+      editSessionId={editSessionId}
+      onClose={() => setEditSessionId(null)}
+      onSaved={() => { setEditSessionId(null); loadPlanData() }}
     />
   )
 
@@ -1096,6 +1132,7 @@ export default function WorkoutPage() {
     return (
       <>
         {logModal}
+        {editModal}
         {genModal}
         <div style={s.completionPage}>
           <div style={s.completionTitle}>Session Complete 🎉</div>
@@ -1139,6 +1176,7 @@ export default function WorkoutPage() {
     return (
       <>
         {logModal}
+        {editModal}
         {genModal}
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           {/* Session header */}
@@ -1281,6 +1319,7 @@ export default function WorkoutPage() {
   return (
     <>
       {logModal}
+      {editModal}
       {genModal}
       <div style={{ ...s.page, padding: isMobile ? '16px 16px 24px' : '28px' }}>
         <h1 style={s.title}>Workout</h1>
@@ -1326,10 +1365,31 @@ export default function WorkoutPage() {
             <div style={s.sectionLabel}>This week's plan — {plan.name}</div>
             <div style={s.dayGrid}>
               {planDays.map((day, idx) => {
-                const isToday = idx === (new Date().getDay() === 0 ? planDays.length - 1 : Math.min(new Date().getDay() - 1, planDays.length - 1))
+                const dow = new Date().getDay()
+                const isToday = idx === (dow === 0 ? planDays.length - 1 : Math.min(dow - 1, planDays.length - 1))
+                const isSelected = selectedDay?.id === day.id
+                const isDone = completedDayIds.has(day.id)
                 const exConfigs = day.exercise_ids || []
                 return (
-                  <div key={day.id} style={{ ...s.dayCard, ...(isToday ? s.dayCardActive : {}) }}>
+                  <div
+                    key={day.id}
+                    style={{
+                      ...s.dayCard,
+                      ...(isSelected ? s.dayCardActive : {}),
+                      cursor: 'pointer',
+                      position: 'relative',
+                      transition: 'border-color 0.15s, background 0.15s',
+                    }}
+                    onClick={() => setSelectedDay(day)}
+                  >
+                    {isDone && (
+                      <div style={{
+                        position: 'absolute', top: '10px', right: '10px',
+                        width: '18px', height: '18px', borderRadius: '50%',
+                        background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '10px', fontWeight: '700', color: '#0a0a0a',
+                      }}>✓</div>
+                    )}
                     <div style={s.dayName}>
                       {isToday && <span style={{ color: 'var(--accent)', marginRight: '6px', fontSize: '10px', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase' }}>TODAY · </span>}
                       {day.day_name}
@@ -1340,11 +1400,66 @@ export default function WorkoutPage() {
                         : <span style={{ color: 'var(--dim)' }}>Rest day</span>
                       }
                     </div>
+                    {isSelected && exConfigs.length > 0 && (
+                      <button
+                        style={{
+                          marginTop: '10px', width: '100%', padding: '7px 0',
+                          background: isDone ? 'var(--surface3)' : 'var(--accent)',
+                          border: isDone ? '1px solid var(--border2)' : 'none',
+                          borderRadius: '6px',
+                          color: isDone ? 'var(--muted)' : '#0a0a0a',
+                          fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+                        }}
+                        onClick={e => { e.stopPropagation(); handleLoadTemplate(day) }}
+                      >
+                        {isDone ? 'Redo session →' : 'Start session →'}
+                      </button>
+                    )}
                   </div>
                 )
               })}
             </div>
           </>
+        )}
+
+        {/* Recent sessions */}
+        {recentSessions.length > 0 && (
+          <div style={{ marginTop: '28px' }}>
+            <div style={s.sectionLabel}>Recent sessions</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {recentSessions.map(sess => (
+                <div
+                  key={sess.id}
+                  style={{
+                    background: 'var(--surface)', border: '1px solid var(--border)',
+                    borderRadius: '10px', padding: '12px 16px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '600' }}>{sess.name || 'Untitled session'}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
+                      {new Date(sess.date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+                      {sess.duration_minutes ? ` · ${sess.duration_minutes} min` : ''}
+                    </div>
+                  </div>
+                  <button
+                    style={{
+                      padding: '6px 14px', background: 'transparent',
+                      border: '1px solid var(--border2)', borderRadius: '7px',
+                      color: 'var(--muted)', fontSize: '12px', fontWeight: '500',
+                      cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s',
+                    }}
+                    onClick={() => setEditSessionId(sess.id)}
+                    onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--text)' }}
+                    onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.color = 'var(--muted)' }}
+                  >
+                    Edit
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </>

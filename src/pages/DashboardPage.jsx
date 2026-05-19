@@ -133,7 +133,7 @@ const s = {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { user } = useAuth()
+  const { user, heatmapRefreshKey } = useAuth()
   const navigate = useNavigate()
   const isMobile = useIsMobile()
   const weekRange = weekRangeLabel()
@@ -435,7 +435,7 @@ export default function DashboardPage() {
       {/* ── Muscle heatmap ── */}
       <div style={s.sectionLabel}>Muscle volume this week {weekRange}</div>
       <div style={s.heatmapCard}>
-        <MuscleHeatmap userId={user.id} />
+        <MuscleHeatmap userId={user.id} refreshKey={heatmapRefreshKey} />
       </div>
 
       {/* ── Agent flags ── */}

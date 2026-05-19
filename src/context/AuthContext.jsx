@@ -14,6 +14,8 @@ export function AuthProvider({ children }) {
   const [workoutUpdate, setWorkoutUpdate] = useState(null)
   const [activeSessionExercises, setActiveSessionExercises] = useState([])
   const [avatarUrl, setAvatarUrl] = useState(null)
+  const [heatmapRefreshKey, setHeatmapRefreshKey] = useState(0)
+  const triggerHeatmapRefresh = useCallback(() => setHeatmapRefreshKey(k => k + 1), [])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -47,6 +49,7 @@ export function AuthProvider({ children }) {
       workoutUpdate, setWorkoutUpdate,
       activeSessionExercises, setActiveSessionExercises,
       avatarUrl, setAvatarUrl,
+      heatmapRefreshKey, triggerHeatmapRefresh,
     }}>
       {children}
     </AuthContext.Provider>

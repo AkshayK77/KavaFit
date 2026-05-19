@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 const s = {
   page: {
@@ -98,6 +99,11 @@ const s = {
 }
 
 export default function Homepage() {
+  const { user, loading } = useAuth()
+
+  if (loading) return null
+  if (user) return <Navigate to="/dashboard" replace />
+
   return (
     <div style={s.page}>
       <div style={s.grid} />
@@ -124,7 +130,7 @@ export default function Homepage() {
             onMouseOver={e => e.currentTarget.style.opacity = '0.85'}
             onMouseOut={e => e.currentTarget.style.opacity = '1'}
           >
-            Get started free
+            Get started
           </Link>
           <Link
             to="/login"

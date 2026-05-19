@@ -246,6 +246,7 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({})
   const [globalError, setGlobalError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [confirmationSent, setConfirmationSent] = useState(false)
   const navigate = useNavigate()
   const { user } = useAuth()
   const isMobile = useIsMobile()
@@ -296,14 +297,18 @@ export default function LoginPage() {
     if (Object.keys(errs).length) { setErrors(errs); return }
     setErrors({})
     setLoading(true)
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: { data: { full_name: form.name } },
     })
     setLoading(false)
     if (error) { setGlobalError(error.message); return }
-    navigate('/onboarding')
+    if (data.session) {
+      navigate('/onboarding')
+    } else {
+      setConfirmationSent(true)
+    }
   }
 
   async function handleGoogle() {
@@ -390,138 +395,155 @@ export default function LoginPage() {
           </div>
         )}
         <div style={{ ...styles.formBox, maxWidth: isMobile ? '100%' : '340px' }}>
-          {/* Tab toggle */}
-          <div style={styles.tabRow}>
-            <button
-              style={{ ...styles.tab, ...(tab === 'signin' ? styles.tabActive : {}) }}
-              onClick={() => { setTab('signin'); setErrors({}); setGlobalError('') }}
-            >
-              Sign In
-            </button>
-            <button
-              style={{ ...styles.tab, ...(tab === 'signup' ? styles.tabActive : {}) }}
-              onClick={() => { setTab('signup'); setErrors({}); setGlobalError('') }}
-            >
-              Create Account
-            </button>
-          </div>
-
-          {globalError && <div style={styles.globalError}>{globalError}</div>}
-
-          {tab === 'signin' ? (
-            <form onSubmit={handleSignIn} noValidate>
-              <h2 style={styles.formTitle}>Welcome back</h2>
-              <p style={styles.formSub}>Sign in to continue your journey.</p>
-
-              <div style={styles.field}>
-                <label style={styles.label}>Email</label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={set('email')}
-                  placeholder="you@example.com"
-                  style={inputStyle('email')}
-                  onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-                  onBlur={e => e.target.style.borderColor = errors.email ? 'var(--red)' : 'var(--border)'}
-                />
-                {errors.email && <p style={styles.errorMsg}>{errors.email}</p>}
-              </div>
-
-              <div style={styles.field}>
-                <label style={styles.label}>Password</label>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={set('password')}
-                  placeholder="••••••••"
-                  style={inputStyle('password')}
-                  onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-                  onBlur={e => e.target.style.borderColor = errors.password ? 'var(--red)' : 'var(--border)'}
-                />
-                {errors.password && <p style={styles.errorMsg}>{errors.password}</p>}
-              </div>
-
-              <div style={styles.forgotRow}>
-                <button type="button" style={styles.forgotLink} onClick={handleForgotPassword}>
-                  Forgot password?
+          {confirmationSent ? (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div style={{ fontSize: '40px', marginBottom: '16px' }}>✉️</div>
+              <h2 style={{ ...styles.formTitle, marginBottom: '12px' }}>Check your email</h2>
+              <p style={{ fontSize: '14px', color: 'var(--muted)', lineHeight: '1.6', marginBottom: '24px' }}>
+                We sent a confirmation link to <strong style={{ color: 'var(--text)' }}>{form.email}</strong>. Click it to activate your account, then come back and sign in.
+              </p>
+              <button
+                style={{ ...styles.submitBtn, marginTop: 0 }}
+                onClick={() => { setConfirmationSent(false); setTab('signin') }}
+              >
+                Go to Sign In
+              </button>
+            </div>
+          ) : (
+            <>
+              <div style={styles.tabRow}>
+                <button
+                  style={{ ...styles.tab, ...(tab === 'signin' ? styles.tabActive : {}) }}
+                  onClick={() => { setTab('signin'); setErrors({}); setGlobalError('') }}
+                >
+                  Sign In
+                </button>
+                <button
+                  style={{ ...styles.tab, ...(tab === 'signup' ? styles.tabActive : {}) }}
+                  onClick={() => { setTab('signup'); setErrors({}); setGlobalError('') }}
+                >
+                  Create Account
                 </button>
               </div>
 
-              <button type="submit" style={styles.submitBtn} disabled={loading}
-                onMouseOver={e => e.target.style.opacity = '0.85'}
-                onMouseOut={e => e.target.style.opacity = '1'}
-              >
-                {loading ? 'Signing in…' : 'Sign In'}
-              </button>
+              {globalError && <div style={styles.globalError}>{globalError}</div>}
 
-              <div style={styles.divider}>
-                <div style={styles.dividerLine} />
-                or
-                <div style={styles.dividerLine} />
-              </div>
+              {tab === 'signin' ? (
+                <form onSubmit={handleSignIn} noValidate>
+                  <h2 style={styles.formTitle}>Welcome back</h2>
+                  <p style={styles.formSub}>Sign in to continue your journey.</p>
 
-              <button type="button" style={styles.googleBtn} onClick={handleGoogle}
-                onMouseOver={e => e.target.style.borderColor = 'var(--border2)'}
-                onMouseOut={e => e.target.style.borderColor = 'var(--border)'}
-              >
-                <GoogleIcon />
-                Continue with Google
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleSignUp} noValidate>
-              <h2 style={styles.formTitle}>Create account</h2>
-              <p style={styles.formSub}>Start your Forge journey today.</p>
+                  <div style={styles.field}>
+                    <label style={styles.label}>Email</label>
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={set('email')}
+                      placeholder="you@example.com"
+                      style={inputStyle('email')}
+                      onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+                      onBlur={e => e.target.style.borderColor = errors.email ? 'var(--red)' : 'var(--border)'}
+                    />
+                    {errors.email && <p style={styles.errorMsg}>{errors.email}</p>}
+                  </div>
 
-              <div style={styles.field}>
-                <label style={styles.label}>Full Name</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={set('name')}
-                  placeholder="Alex Smith"
-                  style={inputStyle('name')}
-                  onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-                  onBlur={e => e.target.style.borderColor = errors.name ? 'var(--red)' : 'var(--border)'}
-                />
-                {errors.name && <p style={styles.errorMsg}>{errors.name}</p>}
-              </div>
+                  <div style={styles.field}>
+                    <label style={styles.label}>Password</label>
+                    <input
+                      type="password"
+                      value={form.password}
+                      onChange={set('password')}
+                      placeholder="••••••••"
+                      style={inputStyle('password')}
+                      onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+                      onBlur={e => e.target.style.borderColor = errors.password ? 'var(--red)' : 'var(--border)'}
+                    />
+                    {errors.password && <p style={styles.errorMsg}>{errors.password}</p>}
+                  </div>
 
-              <div style={styles.field}>
-                <label style={styles.label}>Email</label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={set('email')}
-                  placeholder="you@example.com"
-                  style={inputStyle('email')}
-                  onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-                  onBlur={e => e.target.style.borderColor = errors.email ? 'var(--red)' : 'var(--border)'}
-                />
-                {errors.email && <p style={styles.errorMsg}>{errors.email}</p>}
-              </div>
+                  <div style={styles.forgotRow}>
+                    <button type="button" style={styles.forgotLink} onClick={handleForgotPassword}>
+                      Forgot password?
+                    </button>
+                  </div>
 
-              <div style={styles.field}>
-                <label style={styles.label}>Password</label>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={set('password')}
-                  placeholder="Min. 6 characters"
-                  style={inputStyle('password')}
-                  onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-                  onBlur={e => e.target.style.borderColor = errors.password ? 'var(--red)' : 'var(--border)'}
-                />
-                {errors.password && <p style={styles.errorMsg}>{errors.password}</p>}
-              </div>
+                  <button type="submit" style={styles.submitBtn} disabled={loading}
+                    onMouseOver={e => e.target.style.opacity = '0.85'}
+                    onMouseOut={e => e.target.style.opacity = '1'}
+                  >
+                    {loading ? 'Signing in…' : 'Sign In'}
+                  </button>
 
-              <button type="submit" style={styles.submitBtn} disabled={loading}
-                onMouseOver={e => e.target.style.opacity = '0.85'}
-                onMouseOut={e => e.target.style.opacity = '1'}
-              >
-                {loading ? 'Creating account…' : 'Create Account'}
-              </button>
-            </form>
+                  <div style={styles.divider}>
+                    <div style={styles.dividerLine} />
+                    or
+                    <div style={styles.dividerLine} />
+                  </div>
+
+                  <button type="button" style={styles.googleBtn} onClick={handleGoogle}
+                    onMouseOver={e => e.target.style.borderColor = 'var(--border2)'}
+                    onMouseOut={e => e.target.style.borderColor = 'var(--border)'}
+                  >
+                    <GoogleIcon />
+                    Continue with Google
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleSignUp} noValidate>
+                  <h2 style={styles.formTitle}>Create account</h2>
+                  <p style={styles.formSub}>Start your Forge journey today.</p>
+
+                  <div style={styles.field}>
+                    <label style={styles.label}>Full Name</label>
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={set('name')}
+                      placeholder="Alex Smith"
+                      style={inputStyle('name')}
+                      onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+                      onBlur={e => e.target.style.borderColor = errors.name ? 'var(--red)' : 'var(--border)'}
+                    />
+                    {errors.name && <p style={styles.errorMsg}>{errors.name}</p>}
+                  </div>
+
+                  <div style={styles.field}>
+                    <label style={styles.label}>Email</label>
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={set('email')}
+                      placeholder="you@example.com"
+                      style={inputStyle('email')}
+                      onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+                      onBlur={e => e.target.style.borderColor = errors.email ? 'var(--red)' : 'var(--border)'}
+                    />
+                    {errors.email && <p style={styles.errorMsg}>{errors.email}</p>}
+                  </div>
+
+                  <div style={styles.field}>
+                    <label style={styles.label}>Password</label>
+                    <input
+                      type="password"
+                      value={form.password}
+                      onChange={set('password')}
+                      placeholder="Min. 6 characters"
+                      style={inputStyle('password')}
+                      onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+                      onBlur={e => e.target.style.borderColor = errors.password ? 'var(--red)' : 'var(--border)'}
+                    />
+                    {errors.password && <p style={styles.errorMsg}>{errors.password}</p>}
+                  </div>
+
+                  <button type="submit" style={styles.submitBtn} disabled={loading}
+                    onMouseOver={e => e.target.style.opacity = '0.85'}
+                    onMouseOut={e => e.target.style.opacity = '1'}
+                  >
+                    {loading ? 'Creating account…' : 'Create Account'}
+                  </button>
+                </form>
+              )}
+            </>
           )}
         </div>
       </div>
