@@ -106,11 +106,13 @@ async function geocode(query: string): Promise<Coords | null> {
 
 async function fetchGyms(coords: Coords): Promise<Gym[]> {
   const query = `[out:json];(node["leisure"="fitness_centre"](around:${RADIUS_M},${coords.lat},${coords.lng});node["amenity"="gym"](around:${RADIUS_M},${coords.lat},${coords.lng}););out body;`
-  const res = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `data=${encodeURIComponent(query)}`,
-  })
+  const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`
+  const res = await fetch(url)
+  if (!res.ok) {
+    const body = await res.text()
+    const detail = body.trim() ? `: ${body.slice(0, 200)}` : ''
+    throw new Error(`Overpass ${res.status}${detail}`)
+  }
   const data = await res.json() as { elements: Array<{ id: number; lat: number; lon: number; tags?: Record<string, string> }> }
 
   const seen = new Set<string>()
@@ -341,8 +343,9 @@ export default function GymsPage() {
       writeGymsCache(results, c)
       setGyms(results)
       setStatus('done')
-    } catch {
-      setErrorMsg('Could not fetch gyms. Check your connection and try again.')
+    } catch (err) {
+      const detail = err instanceof Error ? ` (${err.message})` : ''
+      setErrorMsg(`Could not fetch gyms${detail}. Check your connection and try again.`)
       setStatus('error')
     }
   }
