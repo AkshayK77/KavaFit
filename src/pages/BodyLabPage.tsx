@@ -23,6 +23,7 @@ interface NutrientData {
   deficiency: string
   timing: string
   supplement?: string
+  foods: string[]
   muscles: string[]
 }
 
@@ -454,39 +455,39 @@ const DATA: Record<string, MuscleData[]> = {
 }
 
 const NUTRIENT_COLORS: Record<string, { bg: string; color: string; border: string }> = {
-  'Protein':           { bg: 'rgba(107,159,255,0.15)', color: '#6B9FFF', border: 'rgba(107,159,255,0.3)' },
-  'Carbohydrates':     { bg: 'rgba(255,160,80,0.15)',  color: '#FFA050', border: 'rgba(255,160,80,0.3)'  },
-  'Fats':              { bg: 'rgba(255,200,50,0.15)',  color: '#FFC832', border: 'rgba(255,200,50,0.3)'  },
-  'Vitamin A':         { bg: 'rgba(168,224,99,0.15)',  color: '#A8E063', border: 'rgba(168,224,99,0.3)'  },
+  'Protein': { bg: 'rgba(107,159,255,0.15)', color: '#6B9FFF', border: 'rgba(107,159,255,0.3)' },
+  'Carbohydrates': { bg: 'rgba(255,160,80,0.15)', color: '#FFA050', border: 'rgba(255,160,80,0.3)' },
+  'Fats': { bg: 'rgba(255,200,50,0.15)', color: '#FFC832', border: 'rgba(255,200,50,0.3)' },
+  'Vitamin A': { bg: 'rgba(168,224,99,0.15)', color: '#A8E063', border: 'rgba(168,224,99,0.3)' },
   'Vitamin B complex': { bg: 'rgba(180,100,255,0.15)', color: '#B464FF', border: 'rgba(180,100,255,0.3)' },
-  'Vitamin C':         { bg: 'rgba(255,107,107,0.15)', color: '#FF6B6B', border: 'rgba(255,107,107,0.3)' },
-  'Vitamin D':         { bg: 'rgba(245,197,66,0.15)',  color: '#F5C542', border: 'rgba(245,197,66,0.3)'  },
-  'Vitamin E':         { bg: 'rgba(100,220,180,0.15)', color: '#64DCB4', border: 'rgba(100,220,180,0.3)' },
-  'Vitamin K':         { bg: 'rgba(78,205,196,0.15)',  color: '#4ECDC4', border: 'rgba(78,205,196,0.3)'  },
-  'Calcium':           { bg: 'rgba(100,180,255,0.15)', color: '#64B4FF', border: 'rgba(100,180,255,0.3)' },
-  'Iron':              { bg: 'rgba(224,112,80,0.15)',  color: '#E07050', border: 'rgba(224,112,80,0.3)'  },
-  'Magnesium':         { bg: 'rgba(67,201,160,0.15)',  color: '#43C9A0', border: 'rgba(67,201,160,0.3)'  },
-  'Zinc':              { bg: 'rgba(124,156,192,0.15)', color: '#7C9CC0', border: 'rgba(124,156,192,0.3)' },
-  'Potassium':         { bg: 'rgba(249,213,110,0.15)', color: '#F9D56E', border: 'rgba(249,213,110,0.3)' },
-  'Water':             { bg: 'rgba(139,180,232,0.15)', color: '#8BB4E8', border: 'rgba(139,180,232,0.3)' },
-  'Electrolytes':      { bg: 'rgba(0,212,255,0.15)',   color: '#00D4FF', border: 'rgba(0,212,255,0.3)'   },
+  'Vitamin C': { bg: 'rgba(255,107,107,0.15)', color: '#FF6B6B', border: 'rgba(255,107,107,0.3)' },
+  'Vitamin D': { bg: 'rgba(245,197,66,0.15)', color: '#F5C542', border: 'rgba(245,197,66,0.3)' },
+  'Vitamin E': { bg: 'rgba(100,220,180,0.15)', color: '#64DCB4', border: 'rgba(100,220,180,0.3)' },
+  'Vitamin K': { bg: 'rgba(78,205,196,0.15)', color: '#4ECDC4', border: 'rgba(78,205,196,0.3)' },
+  'Calcium': { bg: 'rgba(100,180,255,0.15)', color: '#64B4FF', border: 'rgba(100,180,255,0.3)' },
+  'Iron': { bg: 'rgba(224,112,80,0.15)', color: '#E07050', border: 'rgba(224,112,80,0.3)' },
+  'Magnesium': { bg: 'rgba(67,201,160,0.15)', color: '#43C9A0', border: 'rgba(67,201,160,0.3)' },
+  'Zinc': { bg: 'rgba(124,156,192,0.15)', color: '#7C9CC0', border: 'rgba(124,156,192,0.3)' },
+  'Potassium': { bg: 'rgba(249,213,110,0.15)', color: '#F9D56E', border: 'rgba(249,213,110,0.3)' },
+  'Water': { bg: 'rgba(139,180,232,0.15)', color: '#8BB4E8', border: 'rgba(139,180,232,0.3)' },
+  'Electrolytes': { bg: 'rgba(0,212,255,0.15)', color: '#00D4FF', border: 'rgba(0,212,255,0.3)' },
 }
 
 const MUSCLE_NEEDS: Record<string, string[]> = {
-  chest:       ['Protein', 'Vitamin C', 'Zinc', 'Magnesium', 'Vitamin D'],
-  shoulders:   ['Protein', 'Vitamin C', 'Vitamin D', 'Zinc', 'Fats'],
-  triceps:     ['Protein', 'Carbohydrates', 'Magnesium', 'Vitamin B complex', 'Water'],
-  back:        ['Protein', 'Magnesium', 'Vitamin D', 'Potassium', 'Carbohydrates'],
-  biceps:      ['Protein', 'Carbohydrates', 'Magnesium', 'Vitamin B complex', 'Zinc'],
-  forearms:    ['Protein', 'Iron', 'Vitamin B complex', 'Electrolytes', 'Water'],
-  neck:        ['Protein', 'Calcium', 'Vitamin D', 'Magnesium', 'Vitamin C'],
-  abs:         ['Protein', 'Carbohydrates', 'Vitamin B complex', 'Magnesium', 'Water'],
-  quads:       ['Protein', 'Carbohydrates', 'Potassium', 'Magnesium', 'Electrolytes'],
-  hamstrings:  ['Protein', 'Potassium', 'Magnesium', 'Vitamin E', 'Electrolytes'],
-  glutes:      ['Protein', 'Carbohydrates', 'Vitamin D', 'Magnesium', 'Zinc'],
-  adductors:   ['Protein', 'Potassium', 'Magnesium', 'Vitamin E', 'Water'],
+  chest: ['Protein', 'Vitamin C', 'Zinc', 'Magnesium', 'Vitamin D'],
+  shoulders: ['Protein', 'Vitamin C', 'Vitamin D', 'Zinc', 'Fats'],
+  triceps: ['Protein', 'Carbohydrates', 'Magnesium', 'Vitamin B complex', 'Water'],
+  back: ['Protein', 'Magnesium', 'Vitamin D', 'Potassium', 'Carbohydrates'],
+  biceps: ['Protein', 'Carbohydrates', 'Magnesium', 'Vitamin B complex', 'Zinc'],
+  forearms: ['Protein', 'Iron', 'Vitamin B complex', 'Electrolytes', 'Water'],
+  neck: ['Protein', 'Calcium', 'Vitamin D', 'Magnesium', 'Vitamin C'],
+  abs: ['Protein', 'Carbohydrates', 'Vitamin B complex', 'Magnesium', 'Water'],
+  quads: ['Protein', 'Carbohydrates', 'Potassium', 'Magnesium', 'Electrolytes'],
+  hamstrings: ['Protein', 'Potassium', 'Magnesium', 'Vitamin E', 'Electrolytes'],
+  glutes: ['Protein', 'Carbohydrates', 'Vitamin D', 'Magnesium', 'Zinc'],
+  adductors: ['Protein', 'Potassium', 'Magnesium', 'Vitamin E', 'Water'],
   hip_flexors: ['Protein', 'Vitamin B complex', 'Iron', 'Magnesium', 'Fats'],
-  calves:      ['Protein', 'Potassium', 'Magnesium', 'Iron', 'Electrolytes'],
+  calves: ['Protein', 'Potassium', 'Magnesium', 'Iron', 'Electrolytes'],
 }
 
 const NUTRITION_DATA: Record<string, NutrientData[]> = {
@@ -498,6 +499,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       deficiency: 'Low protein → slow recovery, persistent soreness, and muscle loss despite consistent training.',
       timing: '20–40g within 2 hours post-training; spread total intake across 3–4 meals throughout the day.',
       supplement: 'Whey protein (fast-absorbing post-workout); casein (slow-release overnight recovery).',
+      foods: ['Chicken breast', 'Eggs', 'Greek yogurt', 'Salmon', 'Tuna', 'Beef', 'Cottage cheese', 'Lentils', 'Tofu', 'Shrimp'],
       muscles: ['chest', 'back', 'quads', 'hamstrings', 'glutes'],
     },
     {
@@ -507,6 +509,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       deficiency: 'Low carbs → early fatigue, poor workout performance, and impaired recovery even with adequate protein.',
       timing: '1–2 hrs pre-training for sustained energy; combine with protein within 30–90 min post-training.',
       supplement: 'Creatine works synergistically with carbs — it enhances glycogen storage and ATP resynthesis.',
+      foods: ['White rice', 'Oats', 'Sweet potato', 'Banana', 'Pasta', 'Quinoa', 'Dates', 'Bread', 'Corn', 'Fruit juice'],
       muscles: ['quads', 'back', 'triceps', 'abs', 'hamstrings'],
     },
     {
@@ -516,6 +519,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       deficiency: 'Low fat → hormonal disruption, poor joint recovery, and blocked absorption of fat-soluble vitamins.',
       timing: 'Distribute throughout the day; avoid large fat intake immediately before training as it slows gastric emptying.',
       supplement: 'Omega-3 fish oil (1–3g EPA+DHA daily) reduces systemic inflammation and supports joint recovery.',
+      foods: ['Avocado', 'Almonds', 'Salmon', 'Olive oil', 'Walnuts', 'Egg yolks', 'Macadamia nuts', 'Sardines', 'Flaxseed', 'Dark chocolate'],
       muscles: ['shoulders', 'hip_flexors'],
     },
   ],
@@ -526,6 +530,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       whyItMatters: 'Vitamin A plays a role in protein synthesis and the growth and repair of body tissues including muscle. It supports the immune system, which is temporarily suppressed after intense training. Both retinol and beta-carotene forms contribute to glycogen metabolism and cellular repair processes.',
       deficiency: 'Low vitamin A → impaired tissue repair, increased infection risk post-training, and poor recovery.',
       timing: 'With a fat-containing meal — vitamin A is fat-soluble and requires dietary fat for intestinal absorption.',
+      foods: ['Beef liver', 'Sweet potato', 'Carrots', 'Kale', 'Spinach', 'Red bell pepper', 'Eggs', 'Butternut squash', 'Mango', 'Apricots'],
       muscles: ['back', 'glutes', 'quads'],
     },
     {
@@ -535,6 +540,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       deficiency: 'Low B vitamins → fatigue, poor endurance, brain fog during training, and slowed muscle repair.',
       timing: 'Throughout the day with meals; B12 is best absorbed in smaller, frequent doses rather than one large dose.',
       supplement: 'B12 supplementation is essential for vegans and vegetarians who avoid all animal products.',
+      foods: ['Beef liver', 'Salmon', 'Chicken', 'Eggs', 'Whole grains', 'Sunflower seeds', 'Nutritional yeast', 'Milk', 'Lentils', 'Leafy greens'],
       muscles: ['triceps', 'biceps', 'forearms', 'abs', 'hip_flexors'],
     },
     {
@@ -544,6 +550,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       deficiency: 'Low vitamin C → poor tendon integrity, slow wound healing, and elevated connective tissue injury risk.',
       timing: '30–60 min before training to maximise collagen synthesis; pair with gelatin or collagen peptides for best effect.',
       supplement: '500–1000mg Vitamin C is inexpensive and widely used by injury-prone and high-volume athletes.',
+      foods: ['Red bell pepper', 'Guava', 'Kiwi', 'Strawberries', 'Oranges', 'Broccoli', 'Papaya', 'Brussels sprouts', 'Kale', 'Lemon'],
       muscles: ['chest', 'shoulders', 'neck'],
     },
     {
@@ -553,6 +560,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       deficiency: 'Low vitamin D → reduced muscle power, higher injury risk, impaired bone density, and immune dysfunction.',
       timing: 'With a fatty meal (fat-soluble); morning supplementation supports circadian regulation.',
       supplement: '1000–4000 IU Vitamin D3 daily is widely recommended, especially in winter or low-sunlight climates.',
+      foods: ['Salmon', 'Herring', 'Sardines', 'Tuna', 'Cod liver oil', 'Egg yolks', 'UV-exposed mushrooms', 'Fortified milk', 'Fortified orange juice', 'Mackerel'],
       muscles: ['chest', 'shoulders', 'back', 'glutes', 'neck'],
     },
     {
@@ -561,6 +569,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       whyItMatters: 'Intense eccentric exercise generates reactive oxygen species that damage muscle cell membranes. Vitamin E neutralises these free radicals, reducing DOMS and accelerating recovery. It is particularly important for injury-prone muscles under high eccentric load such as hamstrings and adductors.',
       deficiency: 'Low vitamin E → increased muscle cell membrane damage, higher DOMS, and slower eccentric recovery.',
       timing: 'With a fat-containing meal (fat-soluble); particularly beneficial post-workout on heavy eccentric training days.',
+      foods: ['Sunflower seeds', 'Almonds', 'Avocado', 'Spinach', 'Olive oil', 'Peanut butter', 'Hazelnuts', 'Rainbow trout', 'Butternut squash', 'Pine nuts'],
       muscles: ['hamstrings', 'adductors'],
     },
     {
@@ -570,6 +579,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       deficiency: 'Low vitamin K → impaired calcium deposition, reduced bone density, and delayed healing from micro-trauma.',
       timing: 'With a fat-containing meal; K2 (MK-7 form) pairs best with Vitamin D3 for synergistic bone health.',
       supplement: 'Vitamin K2 MK-7 is commonly combined with Vitamin D3 in bone health stacks.',
+      foods: ['Kale', 'Spinach', 'Natto', 'Collard greens', 'Broccoli', 'Brussels sprouts', 'Parsley', 'Fermented cheese', 'Egg yolks', 'Soybean oil'],
       muscles: ['neck', 'calves'],
     },
     {
@@ -579,6 +589,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       deficiency: 'Low calcium → muscle cramps and spasms, stress fracture risk, and impaired contraction force.',
       timing: 'Spread across the day — absorption is limited to ~500mg per sitting, so split doses are more effective.',
       supplement: 'Calcium citrate (better absorbed, any time) or carbonate (cheaper, with food); always pair with Vitamin D3.',
+      foods: ['Milk', 'Greek yogurt', 'Cheese', 'Sardines (with bones)', 'Tofu', 'Kale', 'Almonds', 'Fortified plant milk', 'Broccoli', 'Bok choy'],
       muscles: ['neck', 'calves'],
     },
     {
@@ -588,6 +599,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       deficiency: 'Low iron → fatigue, reduced endurance, shortness of breath during training, and persistent brain fog.',
       timing: 'On an empty stomach for best absorption; avoid taking with calcium or high-calcium dairy which blocks uptake.',
       supplement: 'Iron bisglycinate is the most tolerable form — do not supplement without a blood test confirming deficiency.',
+      foods: ['Beef liver', 'Oysters', 'Red meat', 'Spinach', 'Lentils', 'Pumpkin seeds', 'Tofu', 'Quinoa', 'Dark chocolate', 'Chickpeas'],
       muscles: ['forearms', 'hip_flexors', 'calves'],
     },
     {
@@ -597,6 +609,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       deficiency: 'Low magnesium → muscle cramps, poor sleep, elevated stress response, and reduced training capacity.',
       timing: 'Before bed — magnesium supports sleep quality and overnight recovery; glycinate or threonate forms absorb best.',
       supplement: 'Magnesium glycinate (recovery and sleep) or malate (energy production) are most popular with athletes.',
+      foods: ['Pumpkin seeds', 'Dark chocolate', 'Almonds', 'Spinach', 'Cashews', 'Black beans', 'Avocado', 'Brown rice', 'Salmon', 'Edamame'],
       muscles: ['chest', 'back', 'quads', 'hamstrings', 'calves'],
     },
     {
@@ -606,6 +619,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       deficiency: 'Low zinc → reduced testosterone, slower recovery, immune suppression, and impaired wound healing.',
       timing: 'With food to reduce nausea; avoid taking with iron or calcium simultaneously as they compete for absorption.',
       supplement: 'Zinc picolinate or glycinate are most bioavailable; ZMA (zinc + magnesium + B6) is popular pre-sleep.',
+      foods: ['Oysters', 'Beef', 'Crab', 'Pumpkin seeds', 'Hemp seeds', 'Chickpeas', 'Lentils', 'Cashews', 'Dark chocolate', 'Eggs'],
       muscles: ['chest', 'shoulders', 'biceps', 'glutes'],
     },
     {
@@ -614,6 +628,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       whyItMatters: 'Potassium maintains the resting membrane potential of muscle cells, enabling rapid, repeated contractions. During intense exercise, potassium shifts out of muscle cells, contributing to fatigue. Together with sodium, it governs the electrolyte balance that drives nerve impulse transmission to muscle fibres.',
       deficiency: 'Low potassium → muscle weakness, cramping, irregular heart rhythm, and rapid fatigue during training.',
       timing: 'Throughout the day in high-potassium foods (bananas, sweet potato, leafy greens) especially around training.',
+      foods: ['Sweet potato', 'Banana', 'Avocado', 'Spinach', 'White potato', 'Coconut water', 'Dried apricots', 'Salmon', 'Kidney beans', 'Pomegranate'],
       muscles: ['back', 'quads', 'hamstrings', 'adductors', 'calves'],
     },
   ],
@@ -624,6 +639,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       whyItMatters: 'Even 2% dehydration reduces strength output by up to 10% and aerobic capacity by up to 20%. Water is the medium for every enzymatic reaction, nutrient transport, and waste product removal in muscle tissue. Adequate hydration is also essential for joint lubrication and spinal disc health under compressive load.',
       deficiency: 'Dehydration → reduced strength, coordination, and endurance; increased injury risk and impaired recovery.',
       timing: 'Aim for 35–45ml per kg of bodyweight daily; consume 400–600ml in the 2 hours before training.',
+      foods: ['Water', 'Watermelon', 'Cucumber', 'Strawberries', 'Lettuce', 'Celery', 'Zucchini', 'Oranges', 'Broth / soups', 'Coconut water'],
       muscles: ['triceps', 'forearms', 'abs', 'adductors'],
     },
     {
@@ -633,6 +649,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       deficiency: 'Low electrolytes → cramping, early fatigue, hyponatremia from drinking plain water without sodium replacement.',
       timing: 'During and after sessions lasting over 60 minutes; include sodium (>200mg per serving) especially in heat.',
       supplement: 'Electrolyte tablets or powder sachets — look for sodium, potassium, and magnesium together in each serving.',
+      foods: ['Coconut water', 'Banana', 'Pickle juice', 'Watermelon', 'Avocado', 'Dairy (sodium)', 'Sea salt', 'Oranges', 'Pumpkin seeds', 'Sports drinks'],
       muscles: ['quads', 'hamstrings', 'calves', 'forearms'],
     },
   ],
@@ -644,6 +661,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       deficiency: 'Supplementing calcium without Vitamin D results in poor absorption and increased arterial calcification risk.',
       timing: 'Both are fat-soluble — take together with a fatty meal, ideally in the morning.',
       supplement: 'Vitamin D3 + K2 + Calcium combination supplements are the most practical approach for this trio.',
+      foods: ['Salmon', 'Sardines (with bones)', 'Fortified milk', 'Greek yogurt', 'Cheese', 'Egg yolks', 'Fortified orange juice', 'Kale', 'Tofu', 'Mackerel'],
       muscles: ['neck', 'calves', 'back'],
     },
     {
@@ -652,6 +670,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       whyItMatters: 'Non-haem iron from plant sources is poorly absorbed on its own. Vitamin C reduces ferric iron to the more absorbable ferrous form and prevents insoluble iron complexes forming in the gut. Studies show vitamin C can increase non-haem iron absorption by up to 6-fold. Athletes on plant-based diets benefit most from always pairing these.',
       deficiency: 'Consuming iron-rich plant foods without vitamin C dramatically reduces the amount of iron actually absorbed.',
       timing: 'Consume together at the same meal — a glass of orange juice with iron-rich foods is the classic well-studied example.',
+      foods: ['Spinach + lemon juice', 'Lentils + bell pepper', 'Beef + tomato', 'Orange juice + fortified cereal', 'Tofu + broccoli', 'Chickpeas + kiwi'],
       muscles: ['forearms', 'calves', 'hip_flexors'],
     },
     {
@@ -660,6 +679,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       whyItMatters: 'Muscle protein synthesis is enzyme-driven, and many of those enzymes require magnesium as a co-factor. Without adequate magnesium, amino acids are absorbed but the molecular machinery to build them into new muscle is impaired. Magnesium also reduces cortisol, a catabolic hormone that directly breaks down muscle protein.',
       deficiency: 'High protein intake with low magnesium may blunt recovery due to impaired synthesis enzyme activity.',
       timing: 'Ensure magnesium intake is adequate throughout the day; magnesium before bed supports overnight protein synthesis.',
+      foods: ['Pumpkin seeds', 'Black beans', 'Salmon + almonds', 'Chicken + spinach', 'Beef + cashews', 'Greek yogurt + dark chocolate', 'Lentils', 'Edamame'],
       muscles: ['chest', 'back', 'quads', 'hamstrings'],
     },
     {
@@ -668,6 +688,7 @@ const NUTRITION_DATA: Record<string, NutrientData[]> = {
       whyItMatters: 'Carbohydrates cannot be converted to ATP without B vitamins as enzymatic co-factors. Thiamine (B1) initiates carbohydrate catabolism; riboflavin (B2) and niacin (B3) shuttle electrons through the electron transport chain; B6 enables glycogen breakdown during high-intensity work. A high-carb diet without adequate B vitamins creates energy bottlenecks despite sufficient fuel.',
       deficiency: 'High carb intake with low B vitamins leads to incomplete energy extraction and persistent fatigue despite eating enough.',
       timing: 'B vitamins are water-soluble and not stored — spread intake throughout the day especially around carb-rich meals.',
+      foods: ['Brown rice', 'Whole wheat pasta', 'Oats', 'Lentils', 'Sunflower seeds', 'Fortified cereals', 'Sweet potato + eggs', 'Quinoa', 'Chickpeas'],
       muscles: ['triceps', 'biceps', 'abs', 'quads'],
     },
   ],
@@ -826,27 +847,27 @@ const MUSCLE_TO_GROUP: Record<string, string> = {
 
 // Maps our group keys → library muscle IDs for each view
 const FRONT_MUSCLES_FOR: Record<string, string[]> = {
-  neck:       ['neck-right', 'neck-left'],
-  shoulders:  ['shoulder-front-left', 'shoulder-side-left', 'shoulder-front-right', 'shoulder-side-right'],
-  chest:      ['chest-upper-left', 'chest-lower-left', 'chest-upper-right', 'chest-lower-right'],
-  biceps:     ['biceps-left', 'biceps-right'],
-  forearms:   ['forearm-left', 'forearm-right'],
-  abs:        ['abs-upper-left', 'abs-upper-right', 'abs-lower-left', 'abs-lower-right', 'serratus-anterior-left', 'serratus-anterior-right', 'obliques-left', 'obliques-right'],
-  hip_flexors:['hip-flexor-left', 'hip-flexor-right'],
-  quads:      ['quads-left', 'quads-right'],
-  adductors:  ['adductors-left', 'adductors-right'],
-  calves:     ['tibialis-anterior-left', 'tibialis-anterior-right'],
+  neck: ['neck-right', 'neck-left'],
+  shoulders: ['shoulder-front-left', 'shoulder-side-left', 'shoulder-front-right', 'shoulder-side-right'],
+  chest: ['chest-upper-left', 'chest-lower-left', 'chest-upper-right', 'chest-lower-right'],
+  biceps: ['biceps-left', 'biceps-right'],
+  forearms: ['forearm-left', 'forearm-right'],
+  abs: ['abs-upper-left', 'abs-upper-right', 'abs-lower-left', 'abs-lower-right', 'serratus-anterior-left', 'serratus-anterior-right', 'obliques-left', 'obliques-right'],
+  hip_flexors: ['hip-flexor-left', 'hip-flexor-right'],
+  quads: ['quads-left', 'quads-right'],
+  adductors: ['adductors-left', 'adductors-right'],
+  calves: ['tibialis-anterior-left', 'tibialis-anterior-right'],
 }
 
 const BACK_MUSCLES_FOR: Record<string, string[]> = {
-  neck:       ['nape'],
-  shoulders:  ['deltoid-rear-left', 'deltoid-rear-right'],
-  back:       ['traps-upper-left', 'traps-mid-left', 'traps-lower-left', 'traps-upper-right', 'traps-mid-right', 'traps-lower-right', 'lats-upper-left', 'lats-mid-left', 'lats-lower-left', 'lats-upper-right', 'lats-mid-right', 'lats-lower-right', 'spine', 'lower-back-erectors-left', 'lower-back-ql-left', 'lower-back-erectors-right', 'lower-back-ql-right'],
-  triceps:    ['triceps-long-left', 'triceps-lateral-left', 'triceps-long-right', 'triceps-lateral-right'],
-  forearms:   ['forearm-flexors-left', 'forearm-extensors-left', 'forearm-flexors-right', 'forearm-extensors-right'],
-  glutes:     ['gluteus-maximus-left', 'gluteus-medius-left', 'gluteus-maximus-right', 'gluteus-medius-right'],
+  neck: ['nape'],
+  shoulders: ['deltoid-rear-left', 'deltoid-rear-right'],
+  back: ['traps-upper-left', 'traps-mid-left', 'traps-lower-left', 'traps-upper-right', 'traps-mid-right', 'traps-lower-right', 'lats-upper-left', 'lats-mid-left', 'lats-lower-left', 'lats-upper-right', 'lats-mid-right', 'lats-lower-right', 'spine', 'lower-back-erectors-left', 'lower-back-ql-left', 'lower-back-erectors-right', 'lower-back-ql-right'],
+  triceps: ['triceps-long-left', 'triceps-lateral-left', 'triceps-long-right', 'triceps-lateral-right'],
+  forearms: ['forearm-flexors-left', 'forearm-extensors-left', 'forearm-flexors-right', 'forearm-extensors-right'],
+  glutes: ['gluteus-maximus-left', 'gluteus-medius-left', 'gluteus-maximus-right', 'gluteus-medius-right'],
   hamstrings: ['hamstrings-medial-left', 'hamstrings-lateral-left', 'hamstrings-medial-right', 'hamstrings-lateral-right'],
-  calves:     ['calves-gastroc-medial-left', 'calves-gastroc-lateral-left', 'calves-soleus-left', 'calves-gastroc-medial-right', 'calves-gastroc-lateral-right', 'calves-soleus-right'],
+  calves: ['calves-gastroc-medial-left', 'calves-gastroc-lateral-left', 'calves-soleus-left', 'calves-gastroc-medial-right', 'calves-gastroc-lateral-right', 'calves-soleus-right'],
 }
 
 function buildBodyState(groupKey: string, muscleMap: Record<string, string[]>): BodyState {
@@ -879,9 +900,9 @@ function BodyMap({ activePart, onPartSelect }: {
   onPartSelect: (part: string) => void
 }) {
   const frontRef = useRef<HTMLDivElement>(null)
-  const backRef  = useRef<HTMLDivElement>(null)
+  const backRef = useRef<HTMLDivElement>(null)
   const frontChart = useRef<BodyChart | null>(null)
-  const backChart  = useRef<BodyChart | null>(null)
+  const backChart = useRef<BodyChart | null>(null)
 
   const handleClick = (id: string) => {
     const group = MUSCLE_TO_GROUP[id]
@@ -917,7 +938,7 @@ function BodyMap({ activePart, onPartSelect }: {
     <div style={sbm.container}>
       <div style={sbm.row}>
         <div ref={frontRef} style={sbm.chartWrap} />
-        <div ref={backRef}  style={sbm.chartWrap} />
+        <div ref={backRef} style={sbm.chartWrap} />
       </div>
       <span style={sbm.hint}>Tap a muscle to explore it</span>
     </div>
@@ -1007,6 +1028,26 @@ function NutrientCard({ nutrient, mode, highlighted, onMuscleClick }: {
             </div>
           )}
 
+          {nutrient.foods.length > 0 && (
+            <div style={{ ...sn.suppCallout, background: 'rgba(100,220,180,0.06)', borderColor: 'rgba(100,220,180,0.2)' }}>
+              <span style={{ ...sn.calloutLabel, color: '#64DCB4' }}>🥗 Best food sources</span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '8px' }}>
+                {nutrient.foods.map(food => (
+                  <span
+                    key={food}
+                    style={{
+                      fontSize: '11px', padding: '3px 9px',
+                      background: 'rgba(100,220,180,0.1)', border: '1px solid rgba(100,220,180,0.25)',
+                      borderRadius: '20px', color: '#64DCB4',
+                    }}
+                  >
+                    {food}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {nutrient.muscles.length > 0 && (
             <div style={sn.musclesRow}>
               <span style={sn.musclesLabel}>Muscles:</span>
@@ -1069,11 +1110,11 @@ export default function BodyLabPage() {
   // Per-group filtering (used when not in global search mode)
   const muscles = q
     ? allMuscles.filter(m =>
-        m.name.toLowerCase().includes(q) ||
-        m.subtitle.toLowerCase().includes(q) ||
-        m.desc.toLowerCase().includes(q) ||
-        m.exercises.some(ex => ex.toLowerCase().includes(q))
-      )
+      m.name.toLowerCase().includes(q) ||
+      m.subtitle.toLowerCase().includes(q) ||
+      m.desc.toLowerCase().includes(q) ||
+      m.exercises.some(ex => ex.toLowerCase().includes(q))
+    )
     : allMuscles
 
   // Global search across all anatomy groups
@@ -1118,14 +1159,14 @@ export default function BodyLabPage() {
   ]
   const nutritionResults = q
     ? allNutrients.filter(n =>
-        n.name.toLowerCase().includes(q) ||
-        n.summary.toLowerCase().includes(q) ||
-        n.whyItMatters.toLowerCase().includes(q) ||
-        n.deficiency.toLowerCase().includes(q) ||
-        n.timing.toLowerCase().includes(q) ||
-        (n.supplement || '').toLowerCase().includes(q) ||
-        n.muscles.some(mk => (PART_LABELS[mk] || '').toLowerCase().includes(q))
-      )
+      n.name.toLowerCase().includes(q) ||
+      n.summary.toLowerCase().includes(q) ||
+      n.whyItMatters.toLowerCase().includes(q) ||
+      n.deficiency.toLowerCase().includes(q) ||
+      n.timing.toLowerCase().includes(q) ||
+      (n.supplement || '').toLowerCase().includes(q) ||
+      n.muscles.some(mk => (PART_LABELS[mk] || '').toLowerCase().includes(q))
+    )
     : []
 
   const hasResults = anatomyResults.length > 0 || nutritionResults.length > 0
@@ -1305,65 +1346,65 @@ export default function BodyLabPage() {
       {/* Anatomy tab */}
       {!isSearching && tab === 'anatomy' && (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: isMobile ? 'visible' : 'hidden' }}>
-        <BodyMap activePart={activePart} onPartSelect={handleBodyMapSelect} />
-        <div style={{ ...s.layout, flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'visible' : 'hidden' }}>
-          {isMobile ? (
-            <div style={s.mobileTabStrip}>
-              {allParts.map(part => (
-                <button
-                  key={part}
-                  style={{ ...s.mobileTab, ...(activePart === part ? s.mobileTabActive : {}) }}
-                  onClick={() => setActivePart(part)}
-                >
-                  {PART_LABELS[part]}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <aside style={s.sidebar}>
-              {GROUPS.map((group, index) => (
-                <div key={`group-${index}`} style={s.group}>
-                  {group.parts.map(part => (
-                    <button
-                      key={part}
-                      style={{ ...s.sideTab, ...(activePart === part ? s.sideTabActive : {}) }}
-                      onClick={() => setActivePart(part)}
-                    >
-                      {PART_LABELS[part]}
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </aside>
-          )}
-
-          <main ref={anatomyContentRef as React.RefObject<HTMLElement>} style={{ ...s.content, padding: isMobile ? '16px' : '24px 28px', overflowY: isMobile ? 'visible' : 'auto' }}>
-            <div style={s.contentHeader}>
-              <h1 style={{ ...s.pageTitle, fontSize: isMobile ? '24px' : '28px' }}>
-                {PART_LABELS[activePart]}
-              </h1>
-              <span style={s.muscleCount}>
-                {q ? `${muscles.length} of ${allMuscles.length}` : `${muscles.length}`} muscle{muscles.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-            {muscles.length === 0 && q ? (
-              <p style={{ fontSize: '13px', color: 'var(--muted)' }}>No muscles match "{search}".</p>
-            ) : (
-              <div style={s.cards}>
-                {muscles.map((muscle, i) => (
-                  <MuscleCard
-                    key={muscle.name}
-                    muscle={muscle}
-                    needs={MUSCLE_NEEDS[activePart] || []}
-                    defaultOpen={i === 0 && !q}
-                    onExerciseClick={setSelectedExercise}
-                    onNutrientClick={handleNutrientClick}
-                  />
+          <BodyMap activePart={activePart} onPartSelect={handleBodyMapSelect} />
+          <div style={{ ...s.layout, flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'visible' : 'hidden' }}>
+            {isMobile ? (
+              <div style={s.mobileTabStrip}>
+                {allParts.map(part => (
+                  <button
+                    key={part}
+                    style={{ ...s.mobileTab, ...(activePart === part ? s.mobileTabActive : {}) }}
+                    onClick={() => setActivePart(part)}
+                  >
+                    {PART_LABELS[part]}
+                  </button>
                 ))}
               </div>
+            ) : (
+              <aside style={s.sidebar}>
+                {GROUPS.map((group, index) => (
+                  <div key={`group-${index}`} style={s.group}>
+                    {group.parts.map(part => (
+                      <button
+                        key={part}
+                        style={{ ...s.sideTab, ...(activePart === part ? s.sideTabActive : {}) }}
+                        onClick={() => setActivePart(part)}
+                      >
+                        {PART_LABELS[part]}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </aside>
             )}
-          </main>
-        </div>
+
+            <main ref={anatomyContentRef as React.RefObject<HTMLElement>} style={{ ...s.content, padding: isMobile ? '16px' : '24px 28px', overflowY: isMobile ? 'visible' : 'auto' }}>
+              <div style={s.contentHeader}>
+                <h1 style={{ ...s.pageTitle, fontSize: isMobile ? '24px' : '28px' }}>
+                  {PART_LABELS[activePart]}
+                </h1>
+                <span style={s.muscleCount}>
+                  {q ? `${muscles.length} of ${allMuscles.length}` : `${muscles.length}`} muscle{muscles.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              {muscles.length === 0 && q ? (
+                <p style={{ fontSize: '13px', color: 'var(--muted)' }}>No muscles match "{search}".</p>
+              ) : (
+                <div style={s.cards}>
+                  {muscles.map((muscle, i) => (
+                    <MuscleCard
+                      key={muscle.name}
+                      muscle={muscle}
+                      needs={MUSCLE_NEEDS[activePart] || []}
+                      defaultOpen={i === 0 && !q}
+                      onExerciseClick={setSelectedExercise}
+                      onNutrientClick={handleNutrientClick}
+                    />
+                  ))}
+                </div>
+              )}
+            </main>
+          </div>
         </div>
       )}
 
