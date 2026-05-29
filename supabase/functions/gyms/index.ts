@@ -11,6 +11,9 @@ const ENDPOINTS = [
   'https://overpass.openstreetmap.ru/api/interpreter',
 ]
 
+// 8s per endpoint × 3 = 24s max, well within the client's 30s timeout
+const ENDPOINT_TIMEOUT_MS = 8000
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -32,8 +35,13 @@ serve(async (req) => {
     for (const endpoint of ENDPOINTS) {
       try {
         const controller = new AbortController()
-        const timer = setTimeout(() => controller.abort(), 20000)
-        const res = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`, { signal: controller.signal })
+        const timer = setTimeout(() => controller.abort(), ENDPOINT_TIMEOUT_MS)
+        const res = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'ForgeApp/1.0 (fitness app; contact: akshayspotify27@gmail.com)',
+          },
+        })
         clearTimeout(timer)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
@@ -41,11 +49,7 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') {
-          lastErr = new Error('Request timed out after 20s')
-        } else {
         lastErr = err
-        }
       }
     }
 
