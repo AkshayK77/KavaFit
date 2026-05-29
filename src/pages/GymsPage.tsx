@@ -29,6 +29,7 @@ interface Gym {
 interface LocationCache {
   lat: number
   lng: number
+  name: string
   source: 'profile' | 'gps' | 'manual'
   timestamp: number
 }
@@ -73,8 +74,8 @@ function readLocCache(): LocationCache | null {
   } catch { return null }
 }
 
-function writeLocCache(lat: number, lng: number, source: LocationCache['source']) {
-  localStorage.setItem(LOC_CACHE_KEY, JSON.stringify({ lat, lng, source, timestamp: Date.now() }))
+function writeLocCache(lat: number, lng: number, name: string, source: LocationCache['source']) {
+  localStorage.setItem(LOC_CACHE_KEY, JSON.stringify({ lat, lng, name, source, timestamp: Date.now() }))
 }
 
 function readGymsCache(coords: Coords): Gym[] | null {
@@ -102,6 +103,20 @@ async function geocode(query: string): Promise<Coords | null> {
     if (!data.length) return null
     return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
   } catch { return null }
+}
+
+async function reverseGeocode(coords: Coords): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${coords.lat}&lon=${coords.lng}&format=json`,
+      { headers: { 'Accept-Language': 'en' } }
+    )
+    const data = await res.json() as { address?: { suburb?: string; neighbourhood?: string; city?: string; town?: string; state?: string } }
+    const a = data.address || {}
+    const area = a.suburb || a.neighbourhood || a.town || a.city || a.state
+    const city = a.city || a.town || a.state
+    return area && city && area !== city ? `${area}, ${city}` : area || city || 'Current location'
+  } catch { return 'Current location' }
 }
 
 async function fetchGyms(coords: Coords): Promise<Gym[]> {
@@ -295,6 +310,7 @@ export default function GymsPage() {
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [coords, setCoords] = useState<Coords | null>(null)
+  const [locationName, setLocationName] = useState('')
   const [gyms, setGyms] = useState<Gym[]>([])
   const [status, setStatus] = useState<Status>('idle')
   const [errorMsg, setErrorMsg] = useState('')
@@ -318,6 +334,7 @@ export default function GymsPage() {
   async function autoResolve() {
     const cached = readLocCache()
     if (cached) {
+      setLocationName(cached.name || '')
       await resolveGyms({ lat: cached.lat, lng: cached.lng })
       return
     }
@@ -325,7 +342,8 @@ export default function GymsPage() {
       setStatus('locating')
       const geo = await geocode(profile.city)
       if (geo) {
-        writeLocCache(geo.lat, geo.lng, 'profile')
+        writeLocCache(geo.lat, geo.lng, profile.city, 'profile')
+        setLocationName(profile.city)
         await resolveGyms(geo)
         return
       }
@@ -364,7 +382,9 @@ export default function GymsPage() {
     navigator.geolocation.getCurrentPosition(
       async pos => {
         const c = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-        writeLocCache(c.lat, c.lng, 'gps')
+        const name = await reverseGeocode(c)
+        writeLocCache(c.lat, c.lng, name, 'gps')
+        setLocationName(name)
         setShowOverride(false)
         await resolveGyms(c)
       },
@@ -385,7 +405,9 @@ export default function GymsPage() {
       setStatus('error')
       return
     }
-    writeLocCache(geo.lat, geo.lng, 'manual')
+    const name = manualInput.trim()
+    writeLocCache(geo.lat, geo.lng, name, 'manual')
+    setLocationName(name)
     setManualInput('')
     setShowOverride(false)
     await resolveGyms(geo)
@@ -395,6 +417,7 @@ export default function GymsPage() {
     localStorage.removeItem(LOC_CACHE_KEY)
     localStorage.removeItem(GYMS_CACHE_KEY)
     setCoords(null)
+    setLocationName('')
     setGyms([])
     setStatus('idle')
     didAutoResolve.current = false
@@ -415,24 +438,31 @@ export default function GymsPage() {
 
       {/* Location bar */}
       {(needsLocationInput || showOverride) && (
-        <div style={s.locationBar}>
-          <span style={s.locationLabel}>{showOverride ? 'Change location:' : 'Set your location:'}</span>
-          <button style={s.gpsBtn} onClick={handleGPS}>
-            Use GPS
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--dim)', marginBottom: '12px' }}>
+            {showOverride ? 'Change location' : 'Set your location'}
+          </div>
+          <button style={{ ...s.gpsBtn, width: '100%', marginBottom: '10px', padding: '11px', textAlign: 'center' as const }} onClick={handleGPS}>
+            Use current location (GPS)
           </button>
-          <form onSubmit={handleManualSubmit} style={{ display: 'flex', gap: '6px', flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', color: 'var(--dim)', fontSize: '11px' }}>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+            or type an area
+            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+          </div>
+          <form onSubmit={handleManualSubmit} style={{ display: 'flex', gap: '8px' }}>
             <input
-              style={s.locInput}
+              style={{ ...s.locInput, flex: 1 }}
               value={manualInput}
               onChange={e => setManualInput(e.target.value)}
-              placeholder="Type area, e.g. Indiranagar"
+              placeholder="e.g. Indiranagar, Bangalore"
               onFocus={e => { e.currentTarget.style.borderColor = 'var(--accent)' }}
               onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
             />
-            <button type="submit" style={s.goBtn}>Go</button>
+            <button type="submit" style={{ ...s.goBtn, padding: '7px 20px', flexShrink: 0 }}>Go</button>
           </form>
           {showOverride && (
-            <button style={s.resetLink} onClick={() => setShowOverride(false)}>Cancel</button>
+            <button style={{ ...s.resetLink, marginTop: '10px', display: 'block' }} onClick={() => setShowOverride(false)}>Cancel</button>
           )}
         </div>
       )}
@@ -464,6 +494,13 @@ export default function GymsPage() {
               <button style={s.resetLink} onClick={() => setShowOverride(true)}>Change location</button>
               <span style={{ color: 'var(--border)', fontSize: '12px' }}>·</span>
               <button style={s.resetLink} onClick={handleReset}>Reset</button>
+            </div>
+          )}
+
+          {locationName && (
+            <div style={{ marginBottom: '10px' }}>
+              <span style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--dim)' }}>Showing gyms near </span>
+              <span style={{ fontSize: '10px', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--accent)' }}>{locationName}</span>
             </div>
           )}
 
