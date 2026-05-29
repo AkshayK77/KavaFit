@@ -104,32 +104,41 @@ async function geocode(query: string): Promise<Coords | null> {
   } catch { return null }
 }
 
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+]
+
 async function fetchGyms(coords: Coords): Promise<Gym[]> {
   const query = `[out:json];(node["leisure"="fitness_centre"](around:${RADIUS_M},${coords.lat},${coords.lng});node["amenity"="gym"](around:${RADIUS_M},${coords.lat},${coords.lng}););out body;`
-  const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`
-  const res = await fetch(url)
-  if (!res.ok) {
-    const body = await res.text()
-    const detail = body.trim() ? `: ${body.slice(0, 200)}` : ''
-    throw new Error(`Overpass ${res.status}${detail}`)
-  }
-  const data = await res.json() as { elements: Array<{ id: number; lat: number; lon: number; tags?: Record<string, string> }> }
 
-  const seen = new Set<string>()
-  return data.elements
-    .map(el => {
-      const tags = el.tags || {}
-      const name = tags.name || 'Unnamed gym'
-      const key = `${name}|${el.lat.toFixed(4)}|${el.lon.toFixed(4)}`
-      if (seen.has(key)) return null
-      seen.add(key)
-      const addrParts = [tags['addr:housename'], tags['addr:street'], tags['addr:suburb'], tags['addr:city']].filter(Boolean)
-      const address = addrParts.join(', ')
-      const distanceKm = haversineKm(coords, { lat: el.lat, lng: el.lon })
-      return { id: el.id, name, lat: el.lat, lng: el.lon, address, distanceKm }
-    })
-    .filter((g): g is Gym => g !== null)
-    .sort((a, b) => a.distanceKm - b.distanceKm)
+  let lastErr: unknown
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const res = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json() as { elements: Array<{ id: number; lat: number; lon: number; tags?: Record<string, string> }> }
+      const seen = new Set<string>()
+      return data.elements
+        .map(el => {
+          const tags = el.tags || {}
+          const name = tags.name || 'Unnamed gym'
+          const key = `${name}|${el.lat.toFixed(4)}|${el.lon.toFixed(4)}`
+          if (seen.has(key)) return null
+          seen.add(key)
+          const addrParts = [tags['addr:housename'], tags['addr:street'], tags['addr:suburb'], tags['addr:city']].filter(Boolean)
+          const address = addrParts.join(', ')
+          const distanceKm = haversineKm(coords, { lat: el.lat, lng: el.lon })
+          return { id: el.id, name, lat: el.lat, lng: el.lon, address, distanceKm }
+        })
+        .filter((g): g is Gym => g !== null)
+        .sort((a, b) => a.distanceKm - b.distanceKm)
+    } catch (err) {
+      lastErr = err
+    }
+  }
+  throw lastErr
 }
 
 // ─── map helpers ──────────────────────────────────────────────────────────────
