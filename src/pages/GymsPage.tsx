@@ -107,7 +107,7 @@ async function geocode(query: string): Promise<Coords | null> {
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
-  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+  'https://overpass.openstreetmap.ru/api/interpreter',
 ]
 
 async function fetchGyms(coords: Coords): Promise<Gym[]> {
@@ -116,7 +116,7 @@ async function fetchGyms(coords: Coords): Promise<Gym[]> {
   let lastErr: unknown
   for (const endpoint of OVERPASS_ENDPOINTS) {
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 9000)
+    const timer = setTimeout(() => controller.abort(), 7000)
     try {
       const res = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`, { signal: controller.signal })
       clearTimeout(timer)
