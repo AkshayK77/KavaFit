@@ -115,8 +115,11 @@ async function fetchGyms(coords: Coords): Promise<Gym[]> {
 
   let lastErr: unknown
   for (const endpoint of OVERPASS_ENDPOINTS) {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 9000)
     try {
-      const res = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`)
+      const res = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`, { signal: controller.signal })
+      clearTimeout(timer)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json() as { elements: Array<{ id: number; lat: number; lon: number; tags?: Record<string, string> }> }
       const seen = new Set<string>()
@@ -135,6 +138,7 @@ async function fetchGyms(coords: Coords): Promise<Gym[]> {
         .filter((g): g is Gym => g !== null)
         .sort((a, b) => a.distanceKm - b.distanceKm)
     } catch (err) {
+      clearTimeout(timer)
       lastErr = err
     }
   }
