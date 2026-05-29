@@ -1197,7 +1197,10 @@ export default function BodyLabPage() {
   }
 
   return (
-    <div style={s.page}>
+    <div style={{
+      ...s.page,
+      ...(isMobile ? { overflowY: 'auto', height: 'auto', minHeight: '100dvh' } : {}),
+    }}>
       {selectedExercise && (
         <ExerciseModal
           exerciseName={selectedExercise}
@@ -1301,9 +1304,9 @@ export default function BodyLabPage() {
 
       {/* Anatomy tab */}
       {!isSearching && tab === 'anatomy' && (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: isMobile ? 'visible' : 'hidden' }}>
         <BodyMap activePart={activePart} onPartSelect={handleBodyMapSelect} />
-        <div style={{ ...s.layout, flexDirection: isMobile ? 'column' : 'row' }}>
+        <div style={{ ...s.layout, flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'visible' : 'hidden' }}>
           {isMobile ? (
             <div style={s.mobileTabStrip}>
               {allParts.map(part => (
@@ -1334,7 +1337,7 @@ export default function BodyLabPage() {
             </aside>
           )}
 
-          <main ref={anatomyContentRef as React.RefObject<HTMLElement>} style={{ ...s.content, padding: isMobile ? '16px' : '24px 28px' }}>
+          <main ref={anatomyContentRef as React.RefObject<HTMLElement>} style={{ ...s.content, padding: isMobile ? '16px' : '24px 28px', overflowY: isMobile ? 'visible' : 'auto' }}>
             <div style={s.contentHeader}>
               <h1 style={{ ...s.pageTitle, fontSize: isMobile ? '24px' : '28px' }}>
                 {PART_LABELS[activePart]}
