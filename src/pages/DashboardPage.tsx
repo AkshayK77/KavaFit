@@ -196,23 +196,33 @@ export default function DashboardPage() {
     setStreak(streakVal)
     setNutrition(nutritionData)
 
-    // Today's workout day — find by matching calendar date to plan day_order
+    // Today's workout day — find by matching local calendar date to plan day_order
     if (planData) {
       const days = (planData.plan_days || []).sort((a, b) => a.day_order - b.day_order)
-      const planStartStr = planData.created_at?.split('T')[0] ?? new Date().toISOString().split('T')[0]
+      // Use local date from created_at (not UTC split, which is wrong for non-UTC timezones)
+      const planStart = planData.created_at ? new Date(planData.created_at) : new Date()
+      const planStartStr = `${planStart.getFullYear()}-${String(planStart.getMonth() + 1).padStart(2, '0')}-${String(planStart.getDate()).padStart(2, '0')}`
       const now = new Date()
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
       const day = days.find(d => {
-        const dayDate = new Date(planStartStr + 'T12:00:00')
+        const dayDate = new Date(planStartStr + 'T00:00:00')
         dayDate.setDate(dayDate.getDate() + d.day_order - 1)
-        return dayDate.toISOString().split('T')[0] === todayStr
+        const dayStr = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`
+        return dayStr === todayStr
       }) ?? days[0]
       setTodayDay(day ?? null)
 
-      const rawIds = Array.isArray(day?.exercise_ids) ? day.exercise_ids : []
-      const ids = (rawIds as Array<{ exerciseId?: string } | string>)
-        .map(e => (typeof e === 'object' && e !== null ? (e as { exerciseId?: string }).exerciseId : e) as string)
-        .filter(Boolean)
+      // Normalize exercise_ids — supports both array format and { exercises, explanation } object format
+      const rawEx = day?.exercise_ids as unknown
+      const exArray: Array<Record<string, unknown>> = Array.isArray(rawEx)
+        ? rawEx
+        : (rawEx && typeof rawEx === 'object' && Array.isArray((rawEx as Record<string, unknown>).exercises))
+          ? (rawEx as { exercises: Array<Record<string, unknown>> }).exercises
+          : []
+
+      const ids = exArray
+        .map(e => (e as { exerciseId?: string }).exerciseId)
+        .filter((id): id is string => Boolean(id))
 
       if (ids.length > 0) {
         type ExRow = { id: string; name: string; muscle_groups?: string[] }
@@ -326,9 +336,7 @@ export default function DashboardPage() {
     setRefreshingFlags(false)
   }
 
-  const estDuration = todayExercises.length
-    ? Math.round((Array.isArray(todayDay?.exercise_ids) ? (todayDay!.exercise_ids as unknown[]).length : todayExercises.length) * 3 * 2.5)
-    : 0
+  const estDuration = todayExercises.length ? Math.round(todayExercises.length * 8) : 0
 
   const allMuscles = [...new Set(todayExercises.flatMap(e => e.muscle_groups || []))]
 

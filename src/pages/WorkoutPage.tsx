@@ -1566,13 +1566,15 @@ export default function WorkoutPage() {
                 const isDone = completedDayIds.has(day.id)
                 const isExpanded = expandedDayId === day.id
 
-                // Compute the actual calendar date: day_order 1 = the day the plan was generated
-                const planStartStr = ((plan as Record<string, unknown>).created_at as string | undefined)?.split('T')[0] ?? new Date().toISOString().split('T')[0]
-                const weekStartDate = new Date(planStartStr + 'T12:00:00')
+                // Compute the actual calendar date using local timezone (not UTC split)
+                const _createdAt = (plan as Record<string, unknown>).created_at as string | undefined
+                const _planStart = _createdAt ? new Date(_createdAt) : new Date()
+                const planStartStr = `${_planStart.getFullYear()}-${String(_planStart.getMonth() + 1).padStart(2, '0')}-${String(_planStart.getDate()).padStart(2, '0')}`
+                const weekStartDate = new Date(planStartStr + 'T00:00:00')
                 weekStartDate.setDate(weekStartDate.getDate() + day.day_order - 1)
                 const _now = new Date()
                 const todayStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
-                const dayDateStr = weekStartDate.toISOString().split('T')[0]
+                const dayDateStr = `${weekStartDate.getFullYear()}-${String(weekStartDate.getMonth() + 1).padStart(2, '0')}-${String(weekStartDate.getDate()).padStart(2, '0')}`
                 const isToday = dayDateStr === todayStr
                 const isPast = dayDateStr < todayStr
                 const dateLabel = weekStartDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
@@ -1708,12 +1710,14 @@ export default function WorkoutPage() {
             </div>
             <div style={s.dayGrid}>
               {planDays.map((day) => {
-                const planStartStr = ((plan as Record<string, unknown>).created_at as string | undefined)?.split('T')[0] ?? new Date().toISOString().split('T')[0]
-                const dayDate = new Date(planStartStr + 'T12:00:00')
+                const _createdAt2 = (plan as Record<string, unknown>).created_at as string | undefined
+                const _planStart2 = _createdAt2 ? new Date(_createdAt2) : new Date()
+                const planStartStr = `${_planStart2.getFullYear()}-${String(_planStart2.getMonth() + 1).padStart(2, '0')}-${String(_planStart2.getDate()).padStart(2, '0')}`
+                const dayDate = new Date(planStartStr + 'T00:00:00')
                 dayDate.setDate(dayDate.getDate() + day.day_order - 1)
                 const _now = new Date()
                 const todayStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
-                const dayDateStr = dayDate.toISOString().split('T')[0]
+                const dayDateStr = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`
                 const isToday = dayDateStr === todayStr
                 const isPast = dayDateStr < todayStr
                 const isSelected = selectedDay?.id === day.id
