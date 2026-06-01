@@ -1544,7 +1544,7 @@ export default function WorkoutPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div>
                 <div style={s.sectionLabel}>{plan.name as string}</div>
-                {profile?.sessions_per_week && (
+                {!!profile?.sessions_per_week && (
                   <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '3px' }}>
                     Based on your preference of <span style={{ color: 'var(--accent)', fontWeight: '600' }}>{profile.sessions_per_week as number} workout{(profile.sessions_per_week as number) !== 1 ? 's' : ''}</span> per week
                   </div>
@@ -1691,7 +1691,7 @@ export default function WorkoutPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div>
                 <div style={s.sectionLabel}>This week's plan — {plan.name as string}</div>
-                {profile?.sessions_per_week && (
+                {!!profile?.sessions_per_week && (
                   <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '3px' }}>
                     Based on your preference of <span style={{ color: 'var(--accent)', fontWeight: '600' }}>{profile.sessions_per_week as number} workout{(profile.sessions_per_week as number) !== 1 ? 's' : ''}</span> per week
                   </div>
