@@ -154,6 +154,7 @@ export default function DashboardPage() {
   const [flags, setFlags] = useState<Flag[]>([])
   const [refreshingFlags, setRefreshingFlags] = useState(false)
   const [weeklySummary, setWeeklySummary] = useState<string | null>(null)
+  const [weeklySummaryLoading, setWeeklySummaryLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [generatingWorkout, setGeneratingWorkout] = useState(false)
 
@@ -163,7 +164,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user) return
-    maybeGenerateWeeklySummary(user.id).then(s => { if (s) setWeeklySummary(s) })
+    setWeeklySummaryLoading(true)
+    maybeGenerateWeeklySummary(user.id)
+      .then(s => { if (s) setWeeklySummary(s) })
+      .finally(() => setWeeklySummaryLoading(false))
   }, [user])
 
   async function loadDashboard() {
@@ -504,17 +508,23 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* ── Weekly summary (Mondays only) ── */}
-      {weeklySummary && (
+      {/* ── Weekly summary ── */}
+      {(weeklySummary || weeklySummaryLoading) && (
         <>
           <div style={s.sectionLabel}>Last week's summary</div>
-          <div style={{ ...s.flagsCard, borderLeft: '3px solid var(--accent)', paddingLeft: '18px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-              <span style={{ fontSize: '15px' }}>📅</span>
-              <span style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent)' }}>Weekly review</span>
+          {weeklySummaryLoading && !weeklySummary ? (
+            <div style={{ ...s.flagsCard, borderLeft: '3px solid var(--accent)', paddingLeft: '18px' }}>
+              <p style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '13px', color: 'var(--muted)', margin: 0, lineHeight: '1.75' }}>Generating your first weekly summary…</p>
             </div>
-            <p style={{ fontSize: '13px', color: 'var(--text)', lineHeight: '1.75', margin: 0 }}>{weeklySummary}</p>
-          </div>
+          ) : weeklySummary ? (
+            <div style={{ ...s.flagsCard, borderLeft: '3px solid var(--accent)', paddingLeft: '18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '15px' }}>📅</span>
+                <span style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent)' }}>Weekly review</span>
+              </div>
+              <p style={{ fontSize: '13px', color: 'var(--text)', lineHeight: '1.75', margin: 0 }}>{weeklySummary}</p>
+            </div>
+          ) : null}
         </>
       )}
     </div>

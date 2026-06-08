@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
+import { identifyUser } from '../lib/analytics'
 import type { Session, User } from '@supabase/supabase-js'
 
 interface AuthContextValue {
@@ -43,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null)
       setLoading(false)
       if (session?.user) {
+        identifyUser(session.user.id)
         supabase.from('profiles').select('avatar_url').eq('id', session.user.id).single()
           .then(({ data }) => {
             const d = data as { avatar_url: string | null } | null
@@ -53,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
+      if (session?.user) identifyUser(session.user.id)
       if (!session?.user) setAvatarUrl(null)
     })
     return () => subscription.unsubscribe()

@@ -24,10 +24,19 @@ function prevWeekEnd() {
 
 export async function maybeGenerateWeeklySummary(userId: string): Promise<string | null> {
   const today = new Date().toISOString().split('T')[0]
-  if (new Date().getDay() !== 1) return null
+  const isMonday = new Date().getDay() === 1
+  const cachedDate = localStorage.getItem('last_summary_date')
+  const cachedSummary = localStorage.getItem('last_weekly_summary')
 
-  const lastDate = localStorage.getItem('last_summary_date')
-  if (lastDate === today) return localStorage.getItem('last_weekly_summary') || null
+  // Return cached summary unless: (a) no cache exists, or (b) it's Monday and cache is from a previous week
+  if (cachedDate && cachedSummary) {
+    const cacheIsFromThisWeek = cachedDate >= thisMonday()
+    if (!isMonday || cacheIsFromThisWeek) {
+      return cachedSummary
+    }
+    // It's Monday and cache is stale — fall through to regenerate
+  }
+  // No cache at all — generate immediately regardless of day
 
   const from = prevWeekStart()
   const to = prevWeekEnd()

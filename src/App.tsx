@@ -1,9 +1,11 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
-import { ToastProvider } from './components/Toast'
+import { ToastProvider, useToast } from './components/Toast'
 import ProtectedRoute from './components/ProtectedRoute'
 import AppShell from './components/AppShell'
 import PageErrorBoundary from './components/PageErrorBoundary'
+import { registerGlobalToast } from './lib/globalToast'
 import Homepage from './pages/Homepage'
 import LoginPage from './pages/LoginPage'
 import OnboardingPage from './pages/OnboardingPage'
@@ -15,6 +17,12 @@ import NutritionPage from './pages/NutritionPage'
 import AIPage from './pages/AIPage'
 import SettingsPage from './pages/SettingsPage'
 import GymsPage from './pages/GymsPage'
+
+function GlobalToastRegistrar() {
+  const { showToast } = useToast()
+  useEffect(() => { registerGlobalToast(showToast) }, [showToast])
+  return null
+}
 
 function AppLayout() {
   return (
@@ -30,6 +38,7 @@ export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+        <GlobalToastRegistrar />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<PageErrorBoundary><Homepage /></PageErrorBoundary>} />

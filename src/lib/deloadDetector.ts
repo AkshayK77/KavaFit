@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { getWeekStart } from './workoutPlan'
+import * as Sentry from '@sentry/react'
 
 // Returns the Monday date string for an arbitrary date
 function weekStartFor(dateStr: string): string {
@@ -59,13 +60,22 @@ export async function checkDeload(userId: string): Promise<{ deloadDue: boolean;
 }
 
 export async function markDeloadSuggested(userId: string): Promise<void> {
-  // Requires deload_suggested_at column on profiles table
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.from('profiles') as any)
-      .update({ deload_suggested_at: new Date().toISOString() })
-      .eq('id', userId)
-  } catch {
-    // Column may not exist yet — silently skip
+  // Requires: ALTER TABLE profiles ADD COLUMN IF NOT EXISTS deload_suggested_at timestamptz;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from('profiles') as any)
+    .update({ deload_suggested_at: new Date().toISOString() })
+    .eq('id', userId)
+
+  if (!error) return
+
+  const msg = (error.message || '').toLowerCase()
+  const isMissingColumn = error.code === '42703' || (msg.includes('column') && msg.includes('deload_suggested_at'))
+
+  if (isMissingColumn) {
+    console.error('[Forge] Missing DB column: deload_suggested_at on profiles table. Run supabase/migrations/add_deload_column.sql to add it. Deload detection is disabled until then.')
+    Sentry.captureException(new Error(`Missing column: deload_suggested_at — ${error.message}`))
+    return
   }
+
+  throw new Error(error.message || 'markDeloadSuggested failed')
 }

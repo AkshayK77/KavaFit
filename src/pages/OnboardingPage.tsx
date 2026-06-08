@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { generateAndSavePlan } from '../lib/workoutPlan'
 import { prewarmGymsCache } from '../lib/gymCache'
+import { track } from '../lib/analytics'
 
 const TOTAL_STEPS = 5
 
@@ -226,6 +227,7 @@ export default function OnboardingPage() {
       // Non-fatal — user can generate plan from workout page
     }
 
+    track('onboarding_completed')
     navigate('/dashboard')
   }
 

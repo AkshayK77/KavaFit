@@ -1,5 +1,7 @@
 import { supabase } from './supabase'
 import { buildAgentContext } from './agentContext'
+import { track } from './analytics'
+import { showGlobalToast } from './globalToast'
 import type { AgentSpecialMode } from '../types/app'
 
 interface HistoryMessage {
@@ -77,11 +79,23 @@ export async function callAgent(
       { role: 'user', content: prompt },
     ]
 
+    track('ai_message_sent', { mode: specialMode || 'chat' })
+
     const { data, error } = await supabase.functions.invoke('ai-proxy', {
       body: { messages, model: 'llama-3.3-70b-versatile', temperature: 0.7 },
     })
 
-    if (error) throw error
+    if (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const status = (error as any)?.context?.status
+      if (status === 429) {
+        showGlobalToast("You're sending messages too fast. Please wait a moment.", 'warning')
+        if (specialMode) return null
+        return "You're sending messages too quickly. Please wait a moment before trying again."
+      }
+      throw error
+    }
+
     return data?.content || ''
   } catch (err) {
     console.error('AI agent error:', err)

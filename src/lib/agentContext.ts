@@ -34,6 +34,10 @@ export interface AgentContext {
   todayDay: TodayDay | null
 }
 
+export function estimateTokenCount(context: object): number {
+  return Math.round(JSON.stringify(context).length / 4)
+}
+
 export async function buildAgentContext(userId: string): Promise<AgentContext> {
   const start = new Date()
   start.setHours(0, 0, 0, 0)
@@ -53,14 +57,23 @@ export async function buildAgentContext(userId: string): Promise<AgentContext> {
     supabase.from('workout_plans').select('id, name, plan_days(id, day_name, day_order, exercise_ids)').eq('user_id', userId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
   ])
 
-  const profile = profileRes.data as Profile | null
-  const recentSessionRows = sessionRes.data as SessionRow[] | null
+  const profileRaw = profileRes.data as Profile | null
+  // Strip null/undefined fields from profile to keep context lean
+  const profile: Profile | null = profileRaw
+    ? Object.fromEntries(Object.entries(profileRaw).filter(([, v]) => v !== null && v !== undefined)) as unknown as Profile
+    : null
+
+  // Cap to 7 most recent sessions (DB fetches 10)
+  const recentSessionRows = ((sessionRes.data as SessionRow[] | null) || []).slice(0, 7)
   const volumeRows = volumeRes.data as VolumeRow[] | null
   const meals = mealRes.data as MealRow[] | null
 
+  // Only include muscle groups with actual volume
+  const filteredVolume = (volumeRows || []).filter(r => (r.total_sets ?? 0) > 0)
+
   // Enrich sessions with sets and exercise names
   let recentSessions: SessionSummary[] = []
-  if (recentSessionRows && recentSessionRows.length > 0) {
+  if (recentSessionRows.length > 0) {
     const sessionIds = recentSessionRows.map(s => s.id)
     type SetRow = { session_id: string; exercise_id: string | null; set_number: number; weight_kg: number | null; reps: number | null; completed: boolean | null }
     const setsRes = await supabase.from('session_sets').select('session_id, exercise_id, set_number, weight_kg, reps, completed').in('session_id', sessionIds).eq('completed', true).order('set_number')
@@ -87,7 +100,8 @@ export async function buildAgentContext(userId: string): Promise<AgentContext> {
       return {
         date: sess.date,
         duration_minutes: sess.duration_minutes,
-        exercises: Object.values(byEx),
+        // Cap to last 10 sets per exercise
+        exercises: Object.values(byEx).map(ex => ({ ...ex, sets: ex.sets.slice(-10) })),
       }
     })
   }
@@ -123,5 +137,15 @@ export async function buildAgentContext(userId: string): Promise<AgentContext> {
     proteinTarget: profile?.daily_protein_target ?? null,
   }
 
-  return { profile, recentSessions, weeklyVolume: volumeRows || [], todayNutrition, todayDay }
+  const context: AgentContext = { profile, recentSessions, weeklyVolume: filteredVolume, todayNutrition, todayDay }
+
+  const tokens = estimateTokenCount(context)
+  if (import.meta.env.DEV && tokens > 4000) {
+    console.warn(`[Forge] Agent context is ~${tokens} tokens — approaching limit.`)
+  }
+  if (tokens > 6000) {
+    context.recentSessions = recentSessions.slice(0, 3)
+  }
+
+  return context
 }

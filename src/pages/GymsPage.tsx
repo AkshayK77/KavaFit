@@ -5,6 +5,7 @@ import L from 'leaflet'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { track } from '../lib/analytics'
 import type { Profile } from '../types/supabase'
 import {
   LOC_CACHE_KEY, GYMS_CACHE_KEY,
@@ -293,6 +294,7 @@ export default function GymsPage() {
     try {
       const results = await fetchGyms(c)
       writeGymsCache(results, c)
+      track('gym_search_performed', { result_count: results.length })
       setGyms(results)
       setStatus('done')
     } catch (err) {

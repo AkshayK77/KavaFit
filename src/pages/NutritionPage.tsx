@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { callAgent, parseAgentJSON } from '../lib/geminiAgent'
 import { useToast } from '../components/Toast'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { track } from '../lib/analytics'
 import FoodSearch from '../components/FoodSearch'
 import type { Profile } from '../types/supabase'
 
@@ -353,6 +354,7 @@ export default function NutritionPage() {
     setLoggingRecipe(false)
     loadTodayMeals()
     loadAllMeals()
+    track('nutrition_meal_logged', { source: 'recipe' })
     showToast('Meal logged', 'success')
   }
 
@@ -370,6 +372,7 @@ export default function NutritionPage() {
     setLoggingAltRecipe(false)
     loadTodayMeals()
     loadAllMeals()
+    track('nutrition_meal_logged', { source: 'alt_recipe' })
     showToast('Meal logged', 'success')
   }
 
@@ -521,7 +524,7 @@ export default function NutritionPage() {
           </div>
 
           {logTab === 'search' && (
-            <FoodSearch onLogged={() => { loadTodayMeals(); loadAllMeals() }} />
+            <FoodSearch onLogged={() => { track('nutrition_meal_logged', { source: 'search' }); loadTodayMeals(); loadAllMeals() }} />
           )}
 
           {logTab === 'describe' && (

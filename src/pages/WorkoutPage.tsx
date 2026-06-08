@@ -9,6 +9,7 @@ import { getProgressionSuggestion } from '../lib/progressiveOverload'
 import { callAgent, parseAgentJSON } from '../lib/geminiAgent'
 import { saveOfflineSet, saveOfflineSession, getOfflineSets, getOfflineSessions, clearOfflineSet, clearOfflineSession } from '../lib/offlineDb'
 import { useToast } from '../components/Toast'
+import { track } from '../lib/analytics'
 import ManualWorkoutLogger from '../components/ManualWorkoutLogger'
 
 interface SessionExercise {
@@ -680,6 +681,7 @@ export default function WorkoutPage() {
     setWarmup(null)
     setWarmupDismissed(false)
     setMode('B')
+    track('workout_session_started', { source: 'template', exercise_count: sessionExsWithHints.length })
     persistActiveSession()
     const muscles = [...new Set(sessionExsWithHints.flatMap(ex => ex.exercise.muscle_groups ?? []))]
     generateWarmup(muscles)
@@ -841,6 +843,7 @@ export default function WorkoutPage() {
       setWarmup(null)
       setWarmupDismissed(false)
       setMode('B')
+      track('workout_session_started', { source: 'ai_generated', exercise_count: sessionExsWithHints.length })
       persistActiveSession()
       const muscles = [...new Set(sessionExsWithHints.flatMap(ex => ex.exercise.muscle_groups || []))]
       generateWarmup(muscles)
@@ -1030,6 +1033,7 @@ export default function WorkoutPage() {
     clearPersistedSession()
     resetActiveSessionState()
     triggerHeatmapRefresh()
+    track('workout_session_completed', { duration_minutes: durationMinutes, exercise_count: totalExercises, set_count: totalSets })
     showToast(prs.length > 0 ? `Session complete — ${prs.length} new PR${prs.length > 1 ? 's' : ''}!` : 'Session complete', 'success')
 
     if (prs.length > 0) {

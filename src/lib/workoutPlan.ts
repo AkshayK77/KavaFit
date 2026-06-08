@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { callGemini } from './gemini'
+import { track } from './analytics'
 import type { Profile, Exercise } from '../types/supabase'
 
 type EquipmentKey = keyof typeof EQUIPMENT_LABELS
@@ -230,6 +231,7 @@ export async function generateAndSavePlan(userId: string, profile: Profile) {
     })
   }
 
+  track('plan_generated', { type: 'weekly_onboarding' })
   return savedPlan
 }
 
@@ -297,6 +299,7 @@ export async function generateOneOffSession(userId: string, profile: Profile) {
   }
   const session = sessInsert.data as { id: string }
 
+  track('plan_generated', { type: 'session_one_off' })
   return { session, exercises, sessionName: result.sessionName }
 }
 
@@ -442,6 +445,7 @@ Rules:
     })
   }
 
+  track('plan_generated', { type: 'weekly_custom', plan_type: planTypeId })
   return savedPlan
 }
 
@@ -661,5 +665,6 @@ Return only valid JSON. No markdown, no backticks, no explanation text outside t
   }
   const session = sessInsert2.data as { id: string }
 
+  track('plan_generated', { type: 'session_ai' })
   return { session, exercises: processedExercises, sessionName: result.sessionName, explanation: result.explanation || null }
 }

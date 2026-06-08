@@ -12,11 +12,13 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@sentry/react": "^10.56.0",
     "@supabase/supabase-js": "^2.104.1",
     "@tailwindcss/vite": "^4.2.4",
     "body-muscles": "^1.0.0",
     "leaflet": "^1.9.4",
     "openai": "^6.34.0",
+    "posthog-js": "^1.382.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-leaflet": "^5.0.0",
