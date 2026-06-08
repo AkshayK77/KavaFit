@@ -141,6 +141,7 @@ const s: Record<string, React.CSSProperties> = {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  throw new Error('sentry test')
   const { user, heatmapRefreshKey } = useAuth()
   const navigate = useNavigate()
   const isMobile = useIsMobile()
