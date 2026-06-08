@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './components/Toast'
 import ProtectedRoute from './components/ProtectedRoute'
 import AppShell from './components/AppShell'
+import PageErrorBoundary from './components/PageErrorBoundary'
 import Homepage from './pages/Homepage'
 import LoginPage from './pages/LoginPage'
 import OnboardingPage from './pages/OnboardingPage'
@@ -31,20 +32,20 @@ export default function App() {
       <ToastProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Homepage />} />
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<PageErrorBoundary><Homepage /></PageErrorBoundary>} />
+            <Route path="/login" element={<PageErrorBoundary><LoginPage /></PageErrorBoundary>} />
             <Route path="/onboarding" element={
-              <ProtectedRoute><OnboardingPage /></ProtectedRoute>
+              <ProtectedRoute><PageErrorBoundary><OnboardingPage /></PageErrorBoundary></ProtectedRoute>
             } />
             <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/workout" element={<WorkoutPage />} />
-              <Route path="/anatomy" element={<BodyLabPage />} />
-              <Route path="/progress" element={<ProgressPage />} />
-              <Route path="/nutrition" element={<NutritionPage />} />
-              <Route path="/ai" element={<AIPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/gyms" element={<GymsPage />} />
+              <Route path="/dashboard" element={<PageErrorBoundary><DashboardPage /></PageErrorBoundary>} />
+              <Route path="/workout" element={<PageErrorBoundary><WorkoutPage /></PageErrorBoundary>} />
+              <Route path="/anatomy" element={<PageErrorBoundary><BodyLabPage /></PageErrorBoundary>} />
+              <Route path="/progress" element={<PageErrorBoundary><ProgressPage /></PageErrorBoundary>} />
+              <Route path="/nutrition" element={<PageErrorBoundary><NutritionPage /></PageErrorBoundary>} />
+              <Route path="/ai" element={<PageErrorBoundary><AIPage /></PageErrorBoundary>} />
+              <Route path="/settings" element={<PageErrorBoundary><SettingsPage /></PageErrorBoundary>} />
+              <Route path="/gyms" element={<PageErrorBoundary><GymsPage /></PageErrorBoundary>} />
             </Route>
           </Routes>
         </BrowserRouter>

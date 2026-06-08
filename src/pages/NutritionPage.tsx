@@ -151,7 +151,7 @@ const s: Record<string, React.CSSProperties> = {
   macroRow: { display: 'flex', gap: '10px' },
 
   cupBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', padding: '2px', lineHeight: 1, transition: 'transform 0.1s' },
-  cupsRow: { display: 'flex', gap: '6px', margin: '10px 0 6px' },
+  cupsRow: { display: 'flex', flexWrap: 'wrap', gap: '6px', margin: '10px 0 6px' },
   waterLabel: { fontSize: '13px', color: 'var(--muted)', marginTop: '2px' },
 
   mealRow: { display: 'flex', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' },

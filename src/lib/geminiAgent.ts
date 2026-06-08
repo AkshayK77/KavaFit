@@ -1,12 +1,6 @@
-import OpenAI from 'openai'
+import { supabase } from './supabase'
 import { buildAgentContext } from './agentContext'
 import type { AgentSpecialMode } from '../types/app'
-
-const groq = new OpenAI({
-  apiKey: import.meta.env.VITE_GROQ_API_KEY,
-  baseURL: 'https://api.groq.com/openai/v1',
-  dangerouslyAllowBrowser: true,
-})
 
 interface HistoryMessage {
   role: string
@@ -76,20 +70,22 @@ export async function callAgent(
         role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
         content: m.text as string,
       }))
-    const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...historyMessages,
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.7,
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...historyMessages,
+      { role: 'user', content: prompt },
+    ]
+
+    const { data, error } = await supabase.functions.invoke('ai-proxy', {
+      body: { messages, model: 'llama-3.3-70b-versatile', temperature: 0.7 },
     })
 
-    return completion.choices[0]?.message?.content || ''
+    if (error) throw error
+    return data?.content || ''
   } catch (err) {
-    console.error('Groq agent error:', err)
+    console.error('AI agent error:', err)
     if (specialMode) return null
-    return "I couldn't connect right now. Please check your Groq API key and try again."
+    return "I couldn't connect right now. Please try again."
   }
 }

@@ -1,58 +1,32 @@
-const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions'
+import { supabase } from './supabase'
 
 export async function callGemini(prompt: string): Promise<Record<string, unknown>> {
   const jsonOnlySuffix = 'Return only valid JSON. No markdown, no backticks, no explanation, no text before or after the JSON object.'
-  const finalPrompt = `${prompt.trim()}
+  const finalPrompt = `${prompt.trim()}\n\n${jsonOnlySuffix}`
 
-${jsonOnlySuffix}`
+  const { data, error } = await supabase.functions.invoke('ai-proxy', {
+    body: {
+      messages: [{ role: 'user', content: finalPrompt }],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.7,
+    },
+  })
 
-  const payload = {
-    model: 'llama-3.3-70b-versatile',
-    messages: [{ role: 'user', content: finalPrompt }],
-    temperature: 0.7,
-  }
+  if (error) throw new Error(error.message)
 
-  const headers = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
-  }
+  const text = data?.content
+  if (!text) throw new Error('AI returned no content')
 
-  console.log('Groq payload:', JSON.stringify(payload, null, 2))
+  const cleaned = text
+    .trim()
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim()
 
-  let responseText
   try {
-    const response = await fetch(GROQ_ENDPOINT, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
-    })
-
-    responseText = await response.text()
-    console.log('Groq raw response status:', response.status)
-    console.log('Groq raw response body:', responseText)
-
-    if (!response.ok) {
-      throw new Error(`Groq error ${response.status}: ${responseText}`)
-    }
-
-    const data = JSON.parse(responseText)
-    const text = data?.choices?.[0]?.message?.content
-    if (!text) throw new Error('Groq returned no content')
-
-    const cleaned = text
-      .trim()
-      .replace(/```json\s*/gi, '')
-      .replace(/```\s*/g, '')
-      .trim()
-
-    try {
-      return JSON.parse(cleaned)
-    } catch (parseErr) {
-      console.error('Groq returned non-JSON:', text)
-      throw new Error('AI response was not valid JSON. Check the console for the raw response.')
-    }
-  } catch (err) {
-    console.error('Full Groq error:', (err as Error).message)
-    throw err
+    return JSON.parse(cleaned)
+  } catch {
+    console.error('AI returned non-JSON:', text)
+    throw new Error('AI response was not valid JSON. Check the console for the raw response.')
   }
 }
