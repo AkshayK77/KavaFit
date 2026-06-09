@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useWorkout } from '../context/WorkoutContext'
 import { callAgent, parseAgentJSON } from '../lib/geminiAgent'
 import { buildAgentContext } from '../lib/agentContext'
 
@@ -125,7 +126,8 @@ const s: Record<string, React.CSSProperties> = {
 }
 
 export default function AIPage() {
-  const { user, activeSessionExercises, setWorkoutUpdate } = useAuth()
+  const { user } = useAuth()
+  const { activeSessionExercises, setWorkoutUpdate } = useWorkout()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)

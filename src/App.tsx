@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { WorkoutProvider } from './context/WorkoutContext'
+import { UIProvider } from './context/UIContext'
 import { ToastProvider, useToast } from './components/Toast'
 import ProtectedRoute from './components/ProtectedRoute'
 import AppShell from './components/AppShell'
@@ -37,28 +39,32 @@ function AppLayout() {
 export default function App() {
   return (
     <AuthProvider>
-      <ToastProvider>
-        <GlobalToastRegistrar />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<PageErrorBoundary><Homepage /></PageErrorBoundary>} />
-            <Route path="/login" element={<PageErrorBoundary><LoginPage /></PageErrorBoundary>} />
-            <Route path="/onboarding" element={
-              <ProtectedRoute><PageErrorBoundary><OnboardingPage /></PageErrorBoundary></ProtectedRoute>
-            } />
-            <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<PageErrorBoundary><DashboardPage /></PageErrorBoundary>} />
-              <Route path="/workout" element={<PageErrorBoundary><WorkoutPage /></PageErrorBoundary>} />
-              <Route path="/anatomy" element={<PageErrorBoundary><BodyLabPage /></PageErrorBoundary>} />
-              <Route path="/progress" element={<PageErrorBoundary><ProgressPage /></PageErrorBoundary>} />
-              <Route path="/nutrition" element={<PageErrorBoundary><NutritionPage /></PageErrorBoundary>} />
-              <Route path="/ai" element={<PageErrorBoundary><AIPage /></PageErrorBoundary>} />
-              <Route path="/settings" element={<PageErrorBoundary><SettingsPage /></PageErrorBoundary>} />
-              <Route path="/gyms" element={<PageErrorBoundary><GymsPage /></PageErrorBoundary>} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </ToastProvider>
+      <WorkoutProvider>
+        <UIProvider>
+          <ToastProvider>
+            <GlobalToastRegistrar />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<PageErrorBoundary><Homepage /></PageErrorBoundary>} />
+                <Route path="/login" element={<PageErrorBoundary><LoginPage /></PageErrorBoundary>} />
+                <Route path="/onboarding" element={
+                  <ProtectedRoute><PageErrorBoundary><OnboardingPage /></PageErrorBoundary></ProtectedRoute>
+                } />
+                <Route element={<AppLayout />}>
+                  <Route path="/dashboard" element={<PageErrorBoundary><DashboardPage /></PageErrorBoundary>} />
+                  <Route path="/workout" element={<PageErrorBoundary><WorkoutPage /></PageErrorBoundary>} />
+                  <Route path="/anatomy" element={<PageErrorBoundary><BodyLabPage /></PageErrorBoundary>} />
+                  <Route path="/progress" element={<PageErrorBoundary><ProgressPage /></PageErrorBoundary>} />
+                  <Route path="/nutrition" element={<PageErrorBoundary><NutritionPage /></PageErrorBoundary>} />
+                  <Route path="/ai" element={<PageErrorBoundary><AIPage /></PageErrorBoundary>} />
+                  <Route path="/settings" element={<PageErrorBoundary><SettingsPage /></PageErrorBoundary>} />
+                  <Route path="/gyms" element={<PageErrorBoundary><GymsPage /></PageErrorBoundary>} />
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </ToastProvider>
+        </UIProvider>
+      </WorkoutProvider>
     </AuthProvider>
   )
 }

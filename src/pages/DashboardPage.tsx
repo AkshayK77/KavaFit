@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { useWorkout } from '../context/WorkoutContext'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { getWeeklyVolume, VOLUME_THRESHOLDS } from '../lib/volumeTracker'
 import { checkDeload, markDeloadSuggested } from '../lib/deloadDetector'
@@ -141,7 +142,8 @@ const s: Record<string, React.CSSProperties> = {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { user, heatmapRefreshKey } = useAuth()
+  const { user } = useAuth()
+  const { heatmapRefreshKey } = useWorkout()
   const navigate = useNavigate()
   const isMobile = useIsMobile()
   const weekRange = weekRangeLabel()

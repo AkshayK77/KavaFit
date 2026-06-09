@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { useWorkout } from '../context/WorkoutContext'
 import { useToast } from './Toast'
 import { updateVolumeLog, subtractVolumeLog } from '../lib/volumeTracker'
 import { classifyExercise } from '../lib/exerciseClassifier'
@@ -128,12 +129,13 @@ const s: Record<string, React.CSSProperties> = {
   },
 }
 
-export default function ManualWorkoutLogger({ onClose, onSaved, editSessionId = null }: {
+const ManualWorkoutLogger = React.memo(function ManualWorkoutLogger({ onClose, onSaved, editSessionId = null }: {
   onClose: () => void
   onSaved?: () => void
   editSessionId?: string | null
 }) {
-  const { user, triggerHeatmapRefresh } = useAuth()
+  const { user } = useAuth()
+  const { triggerHeatmapRefresh } = useWorkout()
   const { showToast } = useToast()
 
   const isEditing = !!editSessionId
@@ -667,4 +669,6 @@ export default function ManualWorkoutLogger({ onClose, onSaved, editSessionId = 
       </div>
     </div>
   )
-}
+})
+
+export default ManualWorkoutLogger

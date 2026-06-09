@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { useWorkout } from '../context/WorkoutContext'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { generateOneOffSession, generateSessionFromPreferences, generateWeeklyPlanByType, getWeekStart } from '../lib/workoutPlan'
 import { updateVolumeLog } from '../lib/volumeTracker'
@@ -261,7 +262,8 @@ const s: Record<string, React.CSSProperties> = {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function WorkoutPage() {
-  const { user, workoutUpdate, setWorkoutUpdate, setActiveSessionExercises, triggerHeatmapRefresh } = useAuth()
+  const { user } = useAuth()
+  const { workoutUpdate, setWorkoutUpdate, setActiveSessionExercises, triggerHeatmapRefresh } = useWorkout()
   const navigate = useNavigate()
   const { showToast } = useToast()
   const isMobile = useIsMobile()
@@ -385,7 +387,7 @@ export default function WorkoutPage() {
   async function syncOfflineSets() {
     try {
       const [sets, sessions] = await Promise.all([
-        getOfflineSets<{ key: string } & Record<string, unknown>>(),
+        getOfflineSets<{ key: string; client_updated_at?: string } & Record<string, unknown>>(),
         getOfflineSessions<{ session_id: string } & Record<string, unknown>>(),
       ])
       for (const sess of sessions) {
@@ -393,8 +395,30 @@ export default function WorkoutPage() {
         await clearOfflineSession(sess.session_id)
       }
       for (const set of sets) {
-        const { key, ...setData } = set
-        await (supabase.from('session_sets') as any).upsert(setData)
+        const { key, client_updated_at, ...setData } = set
+
+        // Conflict check: only upsert if local record is newer than the server row
+        const setId = setData.id as string | undefined
+        if (setId) {
+          type ServerRow = { updated_at: string | null }
+          const { data: existing } = await supabase
+            .from('session_sets')
+            .select('updated_at')
+            .eq('id', setId)
+            .maybeSingle()
+          const serverRow = existing as ServerRow | null
+          if (serverRow?.updated_at && client_updated_at) {
+            const serverTime = new Date(serverRow.updated_at).getTime()
+            const localTime = new Date(client_updated_at).getTime()
+            if (serverTime >= localTime) {
+              console.warn('[offline-sync] skipping set — server version is newer', setId)
+              await clearOfflineSet(key)
+              continue
+            }
+          }
+        }
+
+        await (supabase.from('session_sets') as any).upsert({ ...setData, client_updated_at })
         await clearOfflineSet(key)
       }
     } catch { /* sync silently fails */ }

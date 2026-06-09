@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useUI } from '../context/UIContext'
 import AIDrawer from './AIDrawer'
 import { useIsMobile } from '../hooks/useIsMobile'
 
@@ -23,7 +24,8 @@ const NAV_ITEMS = [
 ]
 
 export default function AppShell({ children }: { children: ReactNode }) {
-  const { user, drawerOpen, setDrawerOpen, avatarUrl } = useAuth()
+  const { user, avatarUrl } = useAuth()
+  const { drawerOpen, setDrawerOpen } = useUI()
   const navigate = useNavigate()
   const location = useLocation()
   const isMobile = useIsMobile()

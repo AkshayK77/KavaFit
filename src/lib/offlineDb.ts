@@ -47,7 +47,11 @@ function idbDelete(store: string, key: IDBValidKey): Promise<void> {
 }
 
 export function saveOfflineSet(set: Record<string, unknown>): Promise<void> {
-  return idbPut(SETS_STORE, { ...set, key: `${set.session_id}_${set.set_number}_${set.exercise_id}` })
+  return idbPut(SETS_STORE, {
+    ...set,
+    client_updated_at: new Date().toISOString(),
+    key: `${set.session_id}_${set.set_number}_${set.exercise_id}`,
+  })
 }
 
 export function saveOfflineSession(data: Record<string, unknown>): Promise<void> {

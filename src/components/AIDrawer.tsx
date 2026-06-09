@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useWorkout } from '../context/WorkoutContext'
+import { useUI } from '../context/UIContext'
 import { callAgent, parseAgentJSON } from '../lib/geminiAgent'
 import { buildAgentContext } from '../lib/agentContext'
 
@@ -155,8 +157,10 @@ const s: Record<string, React.CSSProperties> = {
 
 // ─── component ────────────────────────────────────────────────────────────────
 
-export default function AIDrawer({ onClose }: { onClose: () => void }) {
-  const { user, activeSessionExercises, setWorkoutUpdate, drawerInitMessage, setDrawerInitMessage } = useAuth()
+const AIDrawer = React.memo(function AIDrawer({ onClose }: { onClose: () => void }) {
+  const { user } = useAuth()
+  const { activeSessionExercises, setWorkoutUpdate } = useWorkout()
+  const { drawerInitMessage, setDrawerInitMessage } = useUI()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -361,4 +365,6 @@ export default function AIDrawer({ onClose }: { onClose: () => void }) {
       </div>
     </>
   )
-}
+})
+
+export default AIDrawer
