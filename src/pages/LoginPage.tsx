@@ -70,28 +70,7 @@ const styles: Record<string, React.CSSProperties> = {
     maxWidth: '380px',
     lineHeight: '1.6',
   },
-  stats: {
-    display: 'flex',
-    gap: '40px',
-    position: 'relative',
-    zIndex: 1,
-  },
-  stat: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-  },
-  statNumber: {
-    fontFamily: 'Bebas Neue, sans-serif',
-    fontSize: '28px',
-    letterSpacing: '0.04em',
-    color: 'var(--accent)',
-  },
-  statLabel: {
-    fontSize: '12px',
-    color: 'var(--muted)',
-    letterSpacing: '0.05em',
-  },
+
   rightPanel: {
     flex: '0 0 420px',
     background: 'var(--bg)',
@@ -368,20 +347,6 @@ export default function LoginPage() {
             <p style={styles.subtitle}>
               The AI fitness coach that knows your body, your history, and your goals. Built for people who take their training seriously.
             </p>
-          </div>
-          <div style={styles.stats}>
-            <div style={styles.stat}>
-              <span style={styles.statNumber}>14K+</span>
-              <span style={styles.statLabel}>Active users</span>
-            </div>
-            <div style={styles.stat}>
-              <span style={styles.statNumber}>2.1M</span>
-              <span style={styles.statLabel}>Sessions logged</span>
-            </div>
-            <div style={styles.stat}>
-              <span style={styles.statNumber}>98%</span>
-              <span style={styles.statLabel}>Hit their goals</span>
-            </div>
           </div>
         </div>
       )}

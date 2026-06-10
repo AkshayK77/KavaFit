@@ -1,20 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { callGemini } from '../lib/gemini'
 import { useIsMobile } from '../hooks/useIsMobile'
-
-const RAPIDAPI_HEADERS = {
-  'X-RapidAPI-Key': import.meta.env.VITE_RAPIDAPI_KEY as string,
-  'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
-}
+import { supabase } from '../lib/supabase'
 
 async function searchExerciseDB(query: string) {
   const encoded = encodeURIComponent(query.toLowerCase())
-  const res = await fetch(
-    `https://exercisedb.p.rapidapi.com/exercises/name/${encoded}?limit=5&offset=0`,
-    { headers: RAPIDAPI_HEADERS }
-  )
-  if (!res.ok) return null
-  const data = await res.json()
+  const { data, error } = await supabase.functions.invoke('rapidapi-proxy', {
+    body: { endpoint: `/exercises/name/${encoded}`, params: { limit: '5', offset: '0' } },
+  })
+  if (error || !data) return null
   return Array.isArray(data) && data.length > 0 ? data[0] : null
 }
 

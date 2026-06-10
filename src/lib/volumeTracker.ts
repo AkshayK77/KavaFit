@@ -8,6 +8,7 @@ export const VOLUME_THRESHOLDS = {
   lats: { min: 12, max: 20 },
   mid_back: { min: 10, max: 16 },
   biceps: { min: 10, max: 14 },
+  abs: { min: 8, max: 16 },
   quads: { min: 12, max: 20 },
   hamstrings: { min: 10, max: 16 },
   glutes: { min: 10, max: 16 },
@@ -28,6 +29,7 @@ function mapToVolumeGroup(mgRaw: unknown): string | null {
   if (mg === 'lats') return 'lats'
   if (mg.startsWith('mid_trap') || mg.startsWith('upper_trap') || mg.startsWith('lower_trap') || mg.startsWith('rhomboid') || mg.startsWith('erector') || mg.startsWith('teres')) return 'mid_back'
   if (mg.startsWith('biceps_') || mg.startsWith('brachialis')) return 'biceps'
+  if (mg === 'core' || mg === 'abdominals' || mg === 'obliques' || mg === 'rectus_abdominis' || mg === 'transverse_abdominis' || mg === 'serratus' || mg.startsWith('abs_') || mg.startsWith('core_') || mg.startsWith('abdom')) return 'abs'
   if (mg.startsWith('quads_')) return 'quads'
   if (mg.startsWith('hamstrings_')) return 'hamstrings'
   if (mg.startsWith('glute_')) return 'glutes'

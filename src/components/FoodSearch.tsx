@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
 
-const USDA_KEY = import.meta.env.VITE_USDA_API_KEY as string
 
 interface FoodNutrient {
   nutrientNumber: string | number
@@ -51,14 +50,13 @@ async function searchIndian(q: string): Promise<FoodItem[]> {
 }
 
 async function searchUSDA(q: string): Promise<FoodItem[]> {
-  if (!USDA_KEY) return []
   try {
-    const res = await fetch(
-      `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(q)}&pageSize=6&api_key=${USDA_KEY}`
-    )
-    if (!res.ok) return []
-    const data = await res.json() as { foods?: Array<{ fdcId: number; description: string; servingSizeUnit?: string; servingSize?: number; foodNutrients: FoodNutrient[] }> }
-    return (data.foods || []).map(f => ({
+    const { data, error } = await supabase.functions.invoke('usda-proxy', {
+      body: { query: q, pageSize: 6 },
+    })
+    if (error || !data) return []
+    const typed = data as { foods?: Array<{ fdcId: number; description: string; servingSizeUnit?: string; servingSize?: number; foodNutrients: FoodNutrient[] }> }
+    return (typed.foods || []).map(f => ({
       id: f.fdcId,
       food_code: `usda_${f.fdcId}`,
       food_name: f.description,
