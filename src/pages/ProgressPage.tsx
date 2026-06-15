@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import VolumeTracker from '../components/VolumeTracker'
 import { getWeekStart } from '../lib/workoutPlan'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { useToast } from '../components/Toast'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -193,6 +194,7 @@ const s: Record<string, React.CSSProperties> = {
 export default function ProgressPage() {
   const { user } = useAuth()
   const isMobile = useIsMobile()
+  const { showToast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const now = new Date()
 
@@ -242,7 +244,7 @@ export default function ProgressPage() {
 
   useEffect(() => {
     if (user) loadWeightData(weightRange)
-  }, [weightRange])
+  }, [weightRange, user])
 
   useEffect(() => {
     if (user) loadMonthSessionDates(calYear, calMonth)
@@ -286,7 +288,7 @@ export default function ProgressPage() {
   // ── Section B ──────────────────────────────────────────────────────────────
 
   async function loadPRs() {
-    const { data: sessData } = await supabase.from('sessions').select('id,date').eq('user_id', user!.id).not('completed_at', 'is', null)
+    const { data: sessData } = await supabase.from('sessions').select('id,date').eq('user_id', user!.id).not('completed_at', 'is', null).order('date', { ascending: false }).limit(500)
     const sess = sessData as Array<{ id: string; date: string }> | null
     if (!sess?.length) return
 
@@ -389,7 +391,7 @@ export default function ProgressPage() {
       .upload(path, file, { contentType: file.type, upsert: false })
     if (error) {
       console.error('Photo upload error:', error)
-      alert(`Upload failed: ${error.message}`)
+      showToast('Photo upload failed — please try again', 'error')
     } else {
       await (supabase.from('progress_photos') as any).insert({ user_id: user!.id, date: todayStr(), storage_path: path })
       loadPhotos()

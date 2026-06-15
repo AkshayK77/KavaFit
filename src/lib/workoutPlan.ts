@@ -286,8 +286,6 @@ export async function generateOneOffSession(userId: string, profile: Profile) {
       generatedExerciseIds: exercises.map(e => e.exercise.id),
     }),
   }
-  console.log('Inserting session:', JSON.stringify(sessionRow, null, 2))
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sessInsert = await (supabase.from('sessions') as any)
     .insert(sessionRow)
@@ -652,8 +650,6 @@ Return only valid JSON. No markdown, no backticks, no explanation text outside t
       explanation: result.explanation || null,
     }),
   }
-  console.log('Inserting session:', JSON.stringify(sessionRow, null, 2))
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sessInsert2 = await (supabase.from('sessions') as any)
     .insert(sessionRow)

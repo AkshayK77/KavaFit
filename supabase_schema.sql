@@ -18,6 +18,9 @@ CREATE TABLE profiles (
   daily_calorie_target integer,
   daily_protein_target integer,
   onboarding_complete boolean DEFAULT false,
+  avatar_url text,
+  city text,
+  deload_suggested_at timestamptz,
   updated_at timestamptz DEFAULT now()
 );
 
@@ -52,6 +55,8 @@ CREATE TABLE sessions (
   user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   plan_day_id uuid REFERENCES plan_days(id),
   date date NOT NULL DEFAULT CURRENT_DATE,
+  name text,
+  explanation text,
   duration_minutes integer,
   notes text,
   completed_at timestamptz
@@ -66,6 +71,7 @@ CREATE TABLE session_sets (
   weight_kg decimal,
   rpe integer CHECK (rpe BETWEEN 1 AND 10),
   completed boolean DEFAULT false,
+  client_updated_at timestamptz,
   created_at timestamptz DEFAULT now()
 );
 
@@ -115,11 +121,18 @@ CREATE TABLE progress_photos (
   created_at timestamptz DEFAULT now()
 );
 
+CREATE TABLE rate_limits (
+  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  request_count integer NOT NULL DEFAULT 0,
+  window_start timestamptz NOT NULL DEFAULT now()
+);
+
 -- ============================================================
 -- Row Level Security
 -- ============================================================
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rate_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE exercises ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workout_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE plan_days ENABLE ROW LEVEL SECURITY;
@@ -194,6 +207,11 @@ CREATE POLICY "meal_history: own rows" ON meal_history
 
 -- progress_photos
 CREATE POLICY "progress_photos: own rows" ON progress_photos
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- rate_limits (written only by the ai-proxy edge function via service role;
+-- user-scoped RLS prevents any client from reading or writing other users' rows)
+CREATE POLICY "rate_limits: own rows" ON rate_limits
   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- ============================================================

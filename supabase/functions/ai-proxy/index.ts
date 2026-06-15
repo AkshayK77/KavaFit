@@ -1,10 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+const ALLOWED_ORIGINS = [
+  'https://forge-fitness-pearl.vercel.app',
+  'http://localhost:5173',
+]
 
 const RATE_LIMIT = 20
 const RATE_WINDOW_SECONDS = 60
@@ -13,10 +13,27 @@ const MAX_CONTENT_CHARS = 8000
 const MAX_SYSTEM_PROMPT_CHARS = 4000
 const VALID_ROLES = ['user', 'assistant', 'system']
 const VALID_MODES = ['flags', 'recipe', 'workout', 'grocery', 'warmup']
+const VALID_MODELS = ['llama-3.3-70b-versatile']
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin')
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : null
+
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': allowedOrigin ?? '',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  }
+
   if (req.method === 'OPTIONS') {
+    if (!allowedOrigin) return new Response('Forbidden', { status: 403 })
     return new Response('ok', { headers: corsHeaders })
+  }
+
+  if (!allowedOrigin) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 403,
+    })
   }
 
   try {
@@ -132,6 +149,15 @@ serve(async (req) => {
       )
     }
 
+    if (!VALID_MODELS.includes(model)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid model. Must be one of: ${VALID_MODELS.join(', ')}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
+    const clampedTemperature = Math.min(2, Math.max(0, Number(temperature) || 0.7))
+
     const groqKey = Deno.env.get('GROQ_API_KEY')
     if (!groqKey) {
       return new Response(JSON.stringify({ error: 'Groq API key not configured' }), {
@@ -146,12 +172,12 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${groqKey}`,
       },
-      body: JSON.stringify({ model, messages, temperature }),
+      body: JSON.stringify({ model, messages, temperature: clampedTemperature }),
     })
 
     if (!groqRes.ok) {
-      const errText = await groqRes.text()
-      return new Response(JSON.stringify({ error: `Groq error: ${errText}` }), {
+      console.error('Groq API error:', groqRes.status, await groqRes.text())
+      return new Response(JSON.stringify({ error: 'Internal server error' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 502,
       })
@@ -164,7 +190,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
+    console.error('ai-proxy error:', err)
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     })

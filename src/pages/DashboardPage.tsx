@@ -169,6 +169,7 @@ export default function DashboardPage() {
     setWeeklySummaryLoading(true)
     maybeGenerateWeeklySummary(user.id)
       .then(s => { if (s) setWeeklySummary(s) })
+      .catch(() => { /* summary is non-critical */ })
       .finally(() => setWeeklySummaryLoading(false))
   }, [user])
 

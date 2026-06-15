@@ -308,36 +308,41 @@ export default function NutritionPage() {
     if (!ing.trim()) return
     if (ingredientsOverride !== undefined) setIngredients(ingredientsOverride)
     setGeneratingRecipe(true)
-    const consumed = {
-      calories: todayMeals.reduce((s, m) => s + (m.calories || 0), 0),
-      protein: todayMeals.reduce((s, m) => s + (m.protein_g || 0), 0),
+    try {
+      const consumed = {
+        calories: todayMeals.reduce((s, m) => s + (m.calories || 0), 0),
+        protein: todayMeals.reduce((s, m) => s + (m.protein_g || 0), 0),
+      }
+      const remainingCals = Math.max((profile?.daily_calorie_target || 0) - consumed.calories, 0)
+      const remainingProtein = Math.max((profile?.daily_protein_target || 0) - consumed.protein, 0)
+      const sessionStr = hasSessionToday
+        ? `did train (${todayMuscles.join(', ') || 'general'})`
+        : 'did not train'
+      const allergyStr = profile?.allergies ? ` Avoid allergens: ${profile.allergies}.` : ''
+      const message = `Generate a recipe using EXACTLY these ingredients the user has provided: ${ing.trim()}. Use these ingredients as-is — do not substitute or remove them based on any dietary preference. The user chose these ingredients themselves.${allergyStr} Remaining targets today: ${Math.round(remainingCals)} kcal, ${Math.round(remainingProtein)}g protein. Today they ${sessionStr}.`
+
+      setAltRecipe(null)
+      const text = await callAgent(user!.id, message, 'recipe')
+      const parsed = parseAgentJSON(text) as Recipe | null
+
+      if (parsed) {
+        setCurrentRecipe(parsed)
+        showToast('Recipe generated', 'success')
+
+        const targetCals = parsed.calories || Math.round(remainingCals / 3)
+        const targetProtein = parsed.proteinG || Math.round(remainingProtein / 3)
+        const altMessage = `Generate a VEGETARIAN alternative recipe for a single meal. It must closely match these macros: ~${targetCals} kcal and ~${targetProtein}g protein. Replace any non-vegetarian items from these original ingredients (${ing.trim()}) with vegetarian equivalents.${allergyStr} Use realistic, practical portion sizes for one meal — no more than 150–200g of any single ingredient. Today they ${sessionStr}.`
+        const altText = await callAgent(user!.id, altMessage, 'recipe')
+        const altParsed = parseAgentJSON(altText) as Recipe | null
+        if (altParsed) setAltRecipe(altParsed)
+      } else {
+        showToast('Could not generate recipe — try again', 'error')
+      }
+    } catch {
+      showToast('Could not generate recipe — please try again', 'error')
+    } finally {
+      setGeneratingRecipe(false)
     }
-    const remainingCals = Math.max((profile?.daily_calorie_target || 0) - consumed.calories, 0)
-    const remainingProtein = Math.max((profile?.daily_protein_target || 0) - consumed.protein, 0)
-    const sessionStr = hasSessionToday
-      ? `did train (${todayMuscles.join(', ') || 'general'})`
-      : 'did not train'
-    const allergyStr = profile?.allergies ? ` Avoid allergens: ${profile.allergies}.` : ''
-    const message = `Generate a recipe using EXACTLY these ingredients the user has provided: ${ing.trim()}. Use these ingredients as-is — do not substitute or remove them based on any dietary preference. The user chose these ingredients themselves.${allergyStr} Remaining targets today: ${Math.round(remainingCals)} kcal, ${Math.round(remainingProtein)}g protein. Today they ${sessionStr}.`
-
-    setAltRecipe(null)
-    const text = await callAgent(user!.id, message, 'recipe')
-    const parsed = parseAgentJSON(text) as Recipe | null
-
-    if (parsed) {
-      setCurrentRecipe(parsed)
-      showToast('Recipe generated', 'success')
-
-      const targetCals = parsed.calories || Math.round(remainingCals / 3)
-      const targetProtein = parsed.proteinG || Math.round(remainingProtein / 3)
-      const altMessage = `Generate a VEGETARIAN alternative recipe for a single meal. It must closely match these macros: ~${targetCals} kcal and ~${targetProtein}g protein. Replace any non-vegetarian items from these original ingredients (${ing.trim()}) with vegetarian equivalents.${allergyStr} Use realistic, practical portion sizes for one meal — no more than 150–200g of any single ingredient. Today they ${sessionStr}.`
-      const altText = await callAgent(user!.id, altMessage, 'recipe')
-      const altParsed = parseAgentJSON(altText) as Recipe | null
-      if (altParsed) setAltRecipe(altParsed)
-    } else {
-      showToast('Could not generate recipe — try again', 'error')
-    }
-    setGeneratingRecipe(false)
   }
 
   async function logCurrentRecipe(macros: MacroArg) {

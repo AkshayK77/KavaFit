@@ -421,7 +421,12 @@ export default function WorkoutPage() {
         await (supabase.from('session_sets') as any).upsert({ ...setData, client_updated_at })
         await clearOfflineSet(key)
       }
-    } catch { /* sync silently fails */ }
+    } catch (syncErr) {
+      const msg = syncErr instanceof Error ? syncErr.message : String(syncErr)
+      if (/jwt expired|not authenticated|401/i.test(msg)) {
+        showToast('Session expired — log back in. Your workout is saved locally.', 'warning')
+      }
+    }
   }
 
   async function loadPlanData() {
@@ -589,7 +594,7 @@ export default function WorkoutPage() {
     if (!workoutUpdate || mode !== 'B' || !activeSession) return
     applyWorkoutUpdate(workoutUpdate)
     setWorkoutUpdate(null)
-  }, [workoutUpdate])
+  }, [workoutUpdate, mode, activeSession])
 
   async function applyWorkoutUpdate(update: Record<string, unknown>) {
     const exercises = update.exercises as Array<{ exerciseName?: string; sets: number; repRange?: string }> | undefined
@@ -994,6 +999,20 @@ export default function WorkoutPage() {
       resetActiveSessionState()
       showToast('Session saved offline — will sync when reconnected', 'warning')
       setTimeout(() => navigate('/dashboard'), 3000)
+      return
+    }
+
+    // Guard against expired session before writing — saves data locally instead of losing it
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    if (!currentUser) {
+      for (const set of allSets) await saveOfflineSet(set as Record<string, unknown>)
+      await saveOfflineSession({
+        session_id: activeSession!.id,
+        user_id: user!.id,
+        completed_at: endTime.toISOString(),
+        duration_minutes: durationMinutes,
+      })
+      showToast('Session expired — log back in. Your workout is saved locally.', 'warning')
       return
     }
 

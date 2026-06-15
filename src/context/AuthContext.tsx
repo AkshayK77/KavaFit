@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (d?.avatar_url) setAvatarUrl(d.avatar_url)
           })
       }
-    })
+    }).catch(() => { setLoading(false) })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)

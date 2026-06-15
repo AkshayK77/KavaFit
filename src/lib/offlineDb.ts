@@ -1,10 +1,21 @@
+import { showGlobalToast } from './globalToast'
+
 const DB_NAME = 'forge-offline-v1'
 const SETS_STORE = 'pending-sets'
 const SESSION_STORE = 'pending-sessions'
 
+const IDB_WARNING = 'Offline save unavailable — your sets may not persist if you lose connection'
+
 async function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1)
+    let req: IDBOpenDBRequest
+    try {
+      req = indexedDB.open(DB_NAME, 1)
+    } catch (err) {
+      showGlobalToast(IDB_WARNING, 'warning')
+      reject(err)
+      return
+    }
     req.onupgradeneeded = (e: IDBVersionChangeEvent) => {
       const db = (e.target as IDBOpenDBRequest).result
       if (!db.objectStoreNames.contains(SETS_STORE)) {
@@ -15,7 +26,10 @@ async function openDb(): Promise<IDBDatabase> {
       }
     }
     req.onsuccess = (e: Event) => resolve((e.target as IDBOpenDBRequest).result)
-    req.onerror = (e: Event) => reject((e.target as IDBOpenDBRequest).error)
+    req.onerror = (e: Event) => {
+      showGlobalToast(IDB_WARNING, 'warning')
+      reject((e.target as IDBOpenDBRequest).error)
+    }
   })
 }
 
