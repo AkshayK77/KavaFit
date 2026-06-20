@@ -31,11 +31,6 @@ Log workouts without a connection. Everything syncs automatically when you're ba
 
 ---
 
-## Screenshots
-
-> Coming soon.
-
----
 
 ## Built With
 
