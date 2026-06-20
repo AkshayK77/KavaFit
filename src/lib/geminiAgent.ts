@@ -12,7 +12,7 @@ interface HistoryMessage {
 function buildSystemPrompt(ctx: Awaited<ReturnType<typeof buildAgentContext>>, specialMode: AgentSpecialMode | null): string {
   const { profile, recentSessions, weeklyVolume, todayNutrition, todayDay } = ctx
 
-  let prompt = `You are Forge, an expert AI fitness coach built into the Forge fitness app. You have complete knowledge of this user's data shown below. Always respond specifically using their data — never give generic advice. Be direct, practical, and concise. Do not repeat information the user already knows.
+  let prompt = `You are KavaFit, an expert AI fitness coach built into the KavaFit fitness app. You have complete knowledge of this user's data shown below. Always respond specifically using their data — never give generic advice. Be direct, practical, and concise. Do not repeat information the user already knows.
 
 USER PROFILE:
 ${JSON.stringify(profile, null, 2)}

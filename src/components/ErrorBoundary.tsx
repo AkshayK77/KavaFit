@@ -33,8 +33,8 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <>
           <style>{`
-            .forge-error-detail { display: none; }
-            @media (min-width: 768px) { .forge-error-detail { display: block; } }
+            .kavafit-error-detail { display: none; }
+            @media (min-width: 768px) { .kavafit-error-detail { display: block; } }
           `}</style>
           <div style={{
             minHeight: '100vh',
@@ -70,7 +70,7 @@ export default class ErrorBoundary extends Component<Props, State> {
                 An unexpected error occurred. Reload the app to continue.
               </p>
               {this.state.error?.message && (
-                <p className="forge-error-detail" style={{
+                <p className="kavafit-error-detail" style={{
                   fontFamily: 'monospace',
                   fontSize: '0.7rem',
                   color: 'var(--text, #ffffff)',

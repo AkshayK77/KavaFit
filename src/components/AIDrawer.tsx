@@ -276,7 +276,7 @@ const AIDrawer = React.memo(function AIDrawer({ onClose }: { onClose: () => void
         <div style={s.header}>
           <div style={s.headerLeft}>
             <div style={s.pulse} />
-            <span style={s.title}>Forge AI Coach</span>
+            <span style={s.title}>KavaFit AI Coach</span>
           </div>
           <button style={s.closeBtn} onClick={onClose}>✕</button>
         </div>

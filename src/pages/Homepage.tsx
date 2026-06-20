@@ -31,9 +31,10 @@ const s: Record<string, React.CSSProperties> = {
     gap: '10px',
   },
   brandName: {
-    fontFamily: 'Bebas Neue, sans-serif',
+    fontFamily: '"DM Sans", sans-serif',
+    fontWeight: 800,
     fontSize: '22px',
-    letterSpacing: '0.12em',
+    letterSpacing: '0.05em',
     color: 'var(--text)',
   },
   hero: {
@@ -112,7 +113,7 @@ export default function Homepage() {
       <nav style={s.nav}>
         <div style={s.brand}>
           <BrandMark />
-          <span style={s.brandName}>FORGE</span>
+          <span style={s.brandName}>KavaFit</span>
         </div>
       </nav>
 

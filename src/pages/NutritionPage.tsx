@@ -211,7 +211,7 @@ export default function NutritionPage() {
   const [hasSessionToday, setHasSessionToday] = useState(false)
   const [todayMuscles, setTodayMuscles] = useState<string[]>([])
 
-  const hydrKey = `forge_hydration_${todayStr()}`
+  const hydrKey = `kavafit_hydration_${todayStr()}`
   const [hydrationCups, setHydrationCups] = useState(() => {
     try { const v = localStorage.getItem(hydrKey); return v ? JSON.parse(v) : Array(10).fill(false) }
     catch { return Array(10).fill(false) }

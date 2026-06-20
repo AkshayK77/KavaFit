@@ -141,7 +141,7 @@ export async function buildAgentContext(userId: string): Promise<AgentContext> {
 
   const tokens = estimateTokenCount(context)
   if (import.meta.env.DEV && tokens > 4000) {
-    console.warn(`[Forge] Agent context is ~${tokens} tokens — approaching limit.`)
+    console.warn(`[KavaFit] Agent context is ~${tokens} tokens — approaching limit.`)
   }
   if (tokens > 6000) {
     context.recentSessions = recentSessions.slice(0, 3)

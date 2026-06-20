@@ -268,7 +268,7 @@ export default function DashboardPage() {
 
   function getPrFlagsFromStorage(): Flag[] {
     try {
-      const stored = localStorage.getItem('forge_new_prs')
+      const stored = localStorage.getItem('kavafit_new_prs')
       if (!stored) return []
       const { prs, timestamp } = JSON.parse(stored) as { prs: { name: string; newMax: number; reps?: number }[]; timestamp: number }
       if (Date.now() - timestamp >= 24 * 60 * 60 * 1000) return []
@@ -306,7 +306,7 @@ export default function DashboardPage() {
   async function loadAiFlags(userId: string, prof: Profile | null, streakVal: StreakResult, volumeRows: VolumeRow[], deloadData: { deloadDue: boolean; weeksCount: number }, forceRefresh = false) {
     const prFlags = getPrFlagsFromStorage()
     const today = new Date().toISOString().split('T')[0]
-    const cacheKey = `forge_flags_${userId}_${today}`
+    const cacheKey = `kavafit_flags_${userId}_${today}`
 
     if (!forceRefresh) {
       try {
@@ -338,7 +338,7 @@ export default function DashboardPage() {
     if (!user || refreshingFlags) return
     setRefreshingFlags(true)
     const today = new Date().toISOString().split('T')[0]
-    localStorage.removeItem(`forge_flags_${user.id}_${today}`)
+    localStorage.removeItem(`kavafit_flags_${user.id}_${today}`)
     await loadAiFlags(user.id, profile, streak, [], { deloadDue: false, weeksCount: 0 }, true)
     setRefreshingFlags(false)
   }

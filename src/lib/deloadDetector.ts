@@ -72,7 +72,7 @@ export async function markDeloadSuggested(userId: string): Promise<void> {
   const isMissingColumn = error.code === '42703' || (msg.includes('column') && msg.includes('deload_suggested_at'))
 
   if (isMissingColumn) {
-    console.error('[Forge] Missing DB column: deload_suggested_at on profiles table. Run supabase/migrations/add_deload_column.sql to add it. Deload detection is disabled until then.')
+    console.error('[KavaFit] Missing DB column: deload_suggested_at on profiles table. Run supabase/migrations/add_deload_column.sql to add it. Deload detection is disabled until then.')
     Sentry.captureException(new Error(`Missing column: deload_suggested_at — ${error.message}`))
     return
   }

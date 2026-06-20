@@ -1,6 +1,6 @@
 {
-  "name": "Forge Fitness",
-  "short_name": "Forge",
+  "name": "KavaFit",
+  "short_name": "KavaFit",
   "description": "AI-powered fitness training app",
   "start_url": "/",
   "display": "standalone",

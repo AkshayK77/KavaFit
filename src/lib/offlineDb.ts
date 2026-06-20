@@ -1,6 +1,6 @@
 import { showGlobalToast } from './globalToast'
 
-const DB_NAME = 'forge-offline-v1'
+const DB_NAME = 'kavafit-offline-v1'
 const SETS_STORE = 'pending-sets'
 const SESSION_STORE = 'pending-sessions'
 

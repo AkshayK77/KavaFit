@@ -5,7 +5,7 @@ test.describe('auth', () => {
   test('landing page loads without a JS error', async ({ page }) => {
     const checkErrors = collectConsoleErrors(page)
     await page.goto('/')
-    await expect(page).toHaveTitle(/forge/i)
+    await expect(page).toHaveTitle(/kavafit/i)
     checkErrors()
   })
 

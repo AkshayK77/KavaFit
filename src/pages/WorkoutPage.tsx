@@ -51,7 +51,7 @@ function today() {
   return new Date().toISOString().split('T')[0]
 }
 
-const ACTIVE_SESSION_KEY = 'forge_active_session_v1'
+const ACTIVE_SESSION_KEY = 'kavafit_active_session_v1'
 
 // ─── weekly plan type options ─────────────────────────────────────────────────
 
@@ -1081,7 +1081,7 @@ export default function WorkoutPage() {
 
     if (prs.length > 0) {
       try {
-        localStorage.setItem('forge_new_prs', JSON.stringify({ prs, timestamp: Date.now() }))
+        localStorage.setItem('kavafit_new_prs', JSON.stringify({ prs, timestamp: Date.now() }))
       } catch { /* ignore */ }
       setPrOverlay(prs)
       setTimeout(() => setPrOverlay(null), 2000)

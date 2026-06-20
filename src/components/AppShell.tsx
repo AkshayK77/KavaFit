@@ -6,7 +6,7 @@ import { useUI } from '../context/UIContext'
 import AIDrawer from './AIDrawer'
 import { useIsMobile } from '../hooks/useIsMobile'
 
-const ACTIVE_SESSION_KEY = 'forge_active_session_v1'
+const ACTIVE_SESSION_KEY = 'kavafit_active_session_v1'
 
 interface ActiveTimer {
   sessionName: string
@@ -75,7 +75,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <header style={{ ...s.topbar, padding: isMobile ? '0 14px' : '0 20px' }}>
         <div style={s.brand}>
           <BrandMark />
-          <span style={s.brandName}>FORGE</span>
+          <span style={s.brandName}>KavaFit</span>
         </div>
 
         {/* Desktop nav — hidden on mobile */}
@@ -165,7 +165,7 @@ const s: Record<string, React.CSSProperties> = {
     flexShrink: 0, position: 'relative', zIndex: 10,
   },
   brand: { display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 },
-  brandName: { fontFamily: 'Bebas Neue, sans-serif', fontSize: '20px', letterSpacing: '0.1em', color: 'var(--text)' },
+  brandName: { fontFamily: '"DM Sans", sans-serif', fontWeight: 800, fontSize: '20px', letterSpacing: '0.05em', color: 'var(--text)' },
   navTabs: { display: 'flex', gap: '2px', position: 'absolute', left: '50%', transform: 'translateX(-50%)' },
   navBtn: {
     padding: '6px 14px', background: 'transparent', color: 'var(--muted)',

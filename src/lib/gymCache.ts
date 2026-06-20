@@ -2,8 +2,8 @@ import { supabase } from './supabase'
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
-export const LOC_CACHE_KEY = 'forge_gym_location'
-export const GYMS_CACHE_KEY = 'forge_gyms_cache'
+export const LOC_CACHE_KEY = 'kavafit_gym_location'
+export const GYMS_CACHE_KEY = 'kavafit_gyms_cache'
 export const LOC_TTL = 7 * 24 * 60 * 60 * 1000
 export const GYMS_TTL = 24 * 60 * 60 * 1000
 

@@ -41,7 +41,7 @@ test.describe('ai-coach', () => {
     await aiBtn.click()
 
     // The drawer or AI page should appear
-    await expect(page.locator('text=/forge ai coach|ai coach|ask me/i').first()).toBeVisible({ timeout: 3000 })
+    await expect(page.locator('text=/kavafit ai coach|ai coach|ask me/i').first()).toBeVisible({ timeout: 3000 })
     checkErrors()
   })
 

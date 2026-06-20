@@ -79,7 +79,7 @@ test.describe('workout', () => {
         isPaused: false,
         pauseStart: null,
       }
-      localStorage.setItem('forge_active_session_v1', JSON.stringify(session))
+      localStorage.setItem('kavafit_active_session_v1', JSON.stringify(session))
     })
 
     // Mock session completion upsert

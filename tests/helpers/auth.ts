@@ -9,7 +9,7 @@ const SUPABASE_URL_PATTERN = '**/auth/v1/**'
 export async function mockLogin(page: Page) {
   const fakeUser = {
     id: 'test-user-id-12345',
-    email: 'testuser+forge@example.com',
+    email: 'testuser+kavafit@example.com',
     user_metadata: { full_name: 'Test User' },
     app_metadata: {},
     aud: 'authenticated',

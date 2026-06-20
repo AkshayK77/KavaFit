@@ -40,9 +40,10 @@ const styles: Record<string, React.CSSProperties> = {
     height: '32px',
   },
   brandName: {
-    fontFamily: 'Bebas Neue, sans-serif',
+    fontFamily: '"DM Sans", sans-serif',
+    fontWeight: 800,
     fontSize: '22px',
-    letterSpacing: '0.1em',
+    letterSpacing: '0.05em',
     color: 'var(--text)',
   },
   leftContent: {
@@ -337,7 +338,7 @@ export default function LoginPage() {
           <div style={styles.grid} />
           <div style={styles.brand}>
             <BrandMark />
-            <span style={styles.brandName}>FORGE</span>
+            <span style={styles.brandName}>KavaFit</span>
           </div>
           <div style={styles.leftContent}>
             <h1 style={styles.headline}>
@@ -357,7 +358,7 @@ export default function LoginPage() {
         {isMobile && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '36px' }}>
             <BrandMark />
-            <span style={styles.brandName}>FORGE</span>
+            <span style={styles.brandName}>KavaFit</span>
           </div>
         )}
         <div style={{ ...styles.formBox, maxWidth: isMobile ? '100%' : '340px' }}>
@@ -457,7 +458,7 @@ export default function LoginPage() {
               ) : (
                 <form onSubmit={handleSignUp} noValidate>
                   <h2 style={styles.formTitle}>Create account</h2>
-                  <p style={styles.formSub}>Start your Forge journey today.</p>
+                  <p style={styles.formSub}>Start your KavaFit journey today.</p>
 
                   <div style={styles.field}>
                     <label style={styles.label}>Full Name</label>

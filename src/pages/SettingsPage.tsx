@@ -170,7 +170,7 @@ export default function SettingsPage() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'forge_data_export.json'
+      a.download = 'kavafit_data_export.json'
       a.click()
       URL.revokeObjectURL(url)
       showToast('Export downloaded', 'success')
@@ -296,7 +296,7 @@ export default function SettingsPage() {
             style={{ ...s.btn, ...(exporting ? s.btnDisabled : {}) }}
             onClick={handleExport}
           >
-            {exporting ? 'Exporting…' : 'Export forge_data_export.json'}
+            {exporting ? 'Exporting…' : 'Export kavafit_data_export.json'}
           </button>
         </div>
       </section>
@@ -306,7 +306,7 @@ export default function SettingsPage() {
         <div style={s.sectionLabel}>Account</div>
         <div style={{ ...s.card, borderColor: 'rgba(255,92,92,0.25)' }}>
           <div style={s.cardTitle}>Sign out</div>
-          <p style={s.cardDesc}>You'll need to sign in again to access Forge.</p>
+          <p style={s.cardDesc}>You'll need to sign in again to access KavaFit.</p>
           <button
             style={s.btnDanger}
             onClick={handleSignOut}

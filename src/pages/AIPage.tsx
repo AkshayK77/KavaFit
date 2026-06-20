@@ -214,7 +214,7 @@ export default function AIPage() {
         <div style={s.header}>
           <div style={s.titleRow}>
             <div style={s.pulse} />
-            <h1 style={s.title}>Forge AI Coach</h1>
+            <h1 style={s.title}>KavaFit AI Coach</h1>
           </div>
 
           {contextChips.length > 0 && (
